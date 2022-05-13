@@ -36,6 +36,7 @@
 #include <lib/support/ZclString.h>
 #include <platform/CommissionableDataProvider.h>
 #include <setup_payload/QRCodeSetupPayloadGenerator.h>
+#include <setup_payload/ManualSetupPayloadGenerator.h>
 #include <setup_payload/SetupPayload.h>
 
 #include "CommissionableInit.h"
@@ -589,6 +590,14 @@ CHIP_ERROR PrintQRCodeContent()
     std::cout << "SetupPINCode: [" << setUpPINCode << "]" << std::endl;
     // There might be whitespace in setup QRCode, add brackets to make it clearer.
     std::cout << "SetupQRCode:  [" << result << "]" << std::endl;
+
+    // Wrap it so SuccessOrExit can work
+    {
+        chip::ManualSetupPayloadGenerator generator(payload);
+        err = generator.payloadDecimalStringRepresentation(result);
+        SuccessOrExit(err);
+    }
+    std::cout << "ManualCode:   [" << result << "]" << std::endl;
 
 exit:
     if (err != CHIP_NO_ERROR)
