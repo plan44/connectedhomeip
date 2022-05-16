@@ -567,7 +567,7 @@
 				CODE_SIGN_ENTITLEMENTS = CHIPTool/CHIPTool.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = RQ57RZ75M9;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = CHIPTool/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -590,7 +590,7 @@
 				CODE_SIGN_ENTITLEMENTS = CHIPTool/CHIPTool.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = RQ57RZ75M9;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = CHIPTool/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
