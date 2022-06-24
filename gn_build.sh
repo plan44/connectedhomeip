@@ -206,6 +206,20 @@ fi
 
 echo
 
+openwrt_sdk_args=""
+
+if [[ -d "${OPENWRT_SDK_ROOT}" && -d "${OPENWRT_SDK_SYSROOT}" ]]; then
+    openwrt_sdk_args+="openwrt_sdk_root=\"$OPENWRT_SDK_ROOT\" openwrt_sdk_sysroot=\"$OPENWRT_SDK_SYSROOT\""
+    extra_args+=" $openwrt_sdk_args enable_openwrt_builds=true"
+else
+    echo
+    echo "Hint: Set \$OPENWRT_SDK_ROOT and \$OPENWRT_SDK_SYSROOT to enable building for OPENWRT"
+    echo "      Required OpenWrt buildroot can be obtained from"
+    echo "      https://git.openwrt.org/openwrt/openwrt.git"
+fi
+
+echo
+
 _chip_banner "Build: GN configure"
 
 gn --root="$CHIP_ROOT" gen --check --fail-on-unused-args "$CHIP_ROOT/out/debug" --args='target_os="all"'"$extra_args$user_args"
