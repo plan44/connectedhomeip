@@ -227,7 +227,8 @@ config("warnings_common") {
   }
 
   if (current_os != "mac" && current_os != "ios" && current_os != "linux" &&
-      current_os != "win" && current_os != "tizen" && current_os != "webos") {
+      current_os != "win" && current_os != "tizen" && current_os != "webos" &&
+      current_os != "openwrt") {
     cflags += [ "-Wstack-usage=8192" ]
   }
 }
@@ -314,7 +315,7 @@ config("runtime_default") {
       "$dir_pw_toolchain/host_clang:xcode_sysroot",
     ]
   }
-  if (current_os == "linux" || current_os == "tizen" || current_os == "webos") {
+  if (current_os == "linux" || current_os == "tizen" || current_os == "openwrt" || current_os == "webos") {
     libs = [
       "dl",
       "pthread",
