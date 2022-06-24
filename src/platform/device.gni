@@ -30,7 +30,7 @@ if (chip_device_platform == "auto") {
     chip_device_platform = "fake"
   } else if (current_os == "mac" || current_os == "ios") {
     chip_device_platform = "darwin"
-  } else if (current_os == "linux") {
+  } else if (current_os == "linux" || current_os == "openwrt") {
     chip_device_platform = "linux"
   } else if (current_os == "tizen") {
     chip_device_platform = "tizen"
