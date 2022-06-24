@@ -28,6 +28,8 @@ if (sysroot_platform_config == "") {
     sysroot_platform_config = "${build_root}/toolchain/arm/arm_sysroot.gni"
   } else if (current_os == "tizen") {
     sysroot_platform_config = "${build_root}/config/tizen/tizen_sysroot.gni"
+  } else if (current_os == "openwrt") {
+    sysroot_platform_config = "${build_root}/config/openwrt/openwrt_sysroot.gni"
   }
 }
 
