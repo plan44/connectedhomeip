@@ -49,26 +49,26 @@ void ENFORCE_FORMAT(3, 0) LogV(const char * module, uint8_t category, const char
     {
     case kLogCategory_Error:
         os_log_with_type(log, OS_LOG_TYPE_ERROR, "🔴 %{public}s", formattedMsg);
-#if TARGET_OS_MAC && TARGET_OS_IPHONE == 0
+#if !DARWIN_STDOUT_LOG_DISABLE && TARGET_OS_MAC && TARGET_OS_IPHONE == 0
         fprintf(stdout, "\033[1;31m");
 #endif
         break;
 
     case kLogCategory_Progress:
         os_log_with_type(log, OS_LOG_TYPE_DEFAULT, "🔵 %{public}s", formattedMsg);
-#if TARGET_OS_MAC && TARGET_OS_IPHONE == 0
+#if !DARWIN_STDOUT_LOG_DISABLE && TARGET_OS_MAC && TARGET_OS_IPHONE == 0
         fprintf(stdout, "\033[0;32m");
 #endif
         break;
 
     case kLogCategory_Detail:
         os_log_with_type(log, OS_LOG_TYPE_DEFAULT, "🟢 %{public}s", formattedMsg);
-#if TARGET_OS_MAC && TARGET_OS_IPHONE == 0
+#if !DARWIN_STDOUT_LOG_DISABLE && TARGET_OS_MAC && TARGET_OS_IPHONE == 0
         fprintf(stdout, "\033[0;34m");
 #endif
         break;
     }
-#if TARGET_OS_MAC && TARGET_OS_IPHONE == 0
+#if !DARWIN_STDOUT_LOG_DISABLE && TARGET_OS_MAC && TARGET_OS_IPHONE == 0
     fprintf(stdout, "%s\033[0m\n", formattedMsg);
 #endif
 }
