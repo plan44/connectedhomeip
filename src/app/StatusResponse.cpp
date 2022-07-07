@@ -37,6 +37,12 @@ CHIP_ERROR StatusResponse::Send(Protocols::InteractionModel::Status aStatus, Mes
     response.Status(aStatus);
     ReturnErrorOnFailure(response.GetError());
     ReturnErrorOnFailure(writer.Finalize(&msgBuf));
+
+    // FIXME: remove - luz temp debug only
+    if (aStatus != Protocols::InteractionModel::Status::Success) {
+      ChipLogError(InteractionModel, "!!! failure status: %d, %s", static_cast<int>(aStatus), Protocols::InteractionModel::StatusName(aStatus));
+    }
+
     apExchangeContext->UseSuggestedResponseTimeout(app::kExpectedIMProcessingTime);
     ReturnErrorOnFailure(apExchangeContext->SendMessage(Protocols::InteractionModel::MsgType::StatusResponse, std::move(msgBuf),
                                                         aExpectResponse ? Messaging::SendMessageFlags::kExpectResponse

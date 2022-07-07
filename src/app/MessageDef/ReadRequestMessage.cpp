@@ -42,6 +42,12 @@ CHIP_ERROR ReadRequestMessage::Parser::CheckSchemaValidity() const
     {
         if (!TLV::IsContextTag(reader.GetTag()))
         {
+            // FIXME: luz temp debug only
+            #if CHIP_CONFIG_IM_ENABLE_SCHEMA_CHECK && CHIP_DETAIL_LOGGING
+            uint32_t tn = TLV::TagNumFromTag(reader.GetTag());
+            PRETTY_PRINT("skipping Non-Context-Tag = %u / 0x%08x", tn, tn);
+            #endif
+
             continue;
         }
         uint32_t tagNum = TLV::TagNumFromTag(reader.GetTag());

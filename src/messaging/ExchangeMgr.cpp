@@ -43,12 +43,25 @@
 #include <messaging/ExchangeMgr.h>
 #include <protocols/Protocols.h>
 
+// FIXME: remove - luz temp debug only
+#include <system/TLVPacketBufferBackingStore.h>
+#include <lib/core/CHIPTLVDebug.hpp>
+
 using namespace chip::Encoding;
 using namespace chip::Inet;
 using namespace chip::System;
 
 namespace chip {
 namespace Messaging {
+
+// FIXME: remove - luz temp debug only
+void ENFORCE_FORMAT(1, 2) TLVPrettyPrinterRcv(const char * aFormat, ...)
+{
+    va_list args;
+    va_start(args, aFormat);
+    vprintf(aFormat, args);
+    va_end(args);
+}
 
 /**
  *  Constructor for the ExchangeManager class.
@@ -196,6 +209,34 @@ void ExchangeManager::OnMessageReceived(const PacketHeader & packetHeader, const
                     " and MessageCounter:" ChipLogFormatMessageCounter " on exchange " ChipLogFormatExchangeId,
                     payloadHeader.GetMessageType(), ChipLogValueProtocolId(payloadHeader.GetProtocolID()),
                     packetHeader.GetMessageCounter(), ChipLogValueExchangeIdFromReceivedHeader(payloadHeader));
+
+    // FIXME: remove - luz temp debug only
+    size_t n = msgBuf->DataLength();
+    if (n>0) {
+      ChipLogProgress(ExchangeManager, "----------- RECEIVED %zd bytes of hex data:", n);
+      const int maxhexbytes = 1024;
+      const size_t bufsiz = maxhexbytes*3+1;
+      char prbuf[bufsiz];
+      prbuf[0] = 0;
+      for (size_t i = 0; i<n && i<maxhexbytes; i++) {
+        snprintf(prbuf+i*3, bufsiz, "%02X ", *(msgBuf->Start()+i));
+      }
+      ChipLogProgress(ExchangeManager, "%p: %s", msgBuf->Start(), prbuf);
+      ChipLogProgress(ExchangeManager, "----------- Trying TLV dump");
+      System::PacketBufferTLVReader dumpreader;
+      System::PacketBufferHandle dispBuf = msgBuf.CloneData(); // clone
+      // void Init(chip::System::PacketBufferHandle && buffer)
+      dumpreader.Init(std::move(dispBuf));
+      CHIP_ERROR dumperr = TLV::Debug::Dump(dumpreader, TLVPrettyPrinterRcv);
+      if (dumperr != CHIP_NO_ERROR && dumperr != CHIP_ERROR_END_OF_TLV) {
+        ChipLogError(ExchangeManager, "TLV dump failed: %" CHIP_ERROR_FORMAT, dumperr.Format());
+      }
+      ChipLogProgress(ExchangeManager, "----------- end TLV dump");
+    }
+    else {
+      ChipLogProgress(ExchangeManager, "----------- RECEIVED no TLV data");
+    }
+
 
     MessageFlags msgFlags;
     if (isDuplicate == DuplicateMessage::Yes)
