@@ -136,6 +136,7 @@ public:
     public:
         AttributeEncodeState() : mAllowPartialData(false), mCurrentEncodingListIndex(kInvalidListIndex) {}
         bool AllowPartialData() const { return mAllowPartialData; }
+        ListIndex EncodingIndex() const { return mCurrentEncodingListIndex; }
 
     private:
         friend class AttributeValueEncoder;
