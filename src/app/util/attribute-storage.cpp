@@ -558,6 +558,11 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
         if (emAfEndpoints[ep].endpoint == attRecord->endpoint)
         {
             const EmberAfEndpointType * endpointType = emAfEndpoints[ep].endpointType;
+            if (endpointType == nullptr)
+            {
+                // skip entirely undefined endpoints
+                continue;
+            }
             uint8_t clusterIndex;
             if (!emberAfEndpointIndexIsEnabled(ep))
             {
@@ -673,27 +678,29 @@ const EmberAfCluster * emberAfFindClusterInType(const EmberAfEndpointType * endp
     uint8_t i;
     uint8_t scopedIndex = 0;
 
-    for (i = 0; i < endpointType->clusterCount; i++)
+    if (endpointType != nullptr)
     {
-        const EmberAfCluster * cluster = &(endpointType->cluster[i]);
-
-        if ((mask == 0 || (mask == CLUSTER_MASK_CLIENT && emberAfClusterIsClient(cluster)) ||
-             (mask == CLUSTER_MASK_SERVER && emberAfClusterIsServer(cluster))))
+        for (i = 0; i < endpointType->clusterCount; i++)
         {
-            if (cluster->clusterId == clusterId)
+            const EmberAfCluster * cluster = &(endpointType->cluster[i]);
+
+            if ((mask == 0 || (mask == CLUSTER_MASK_CLIENT && emberAfClusterIsClient(cluster)) ||
+                 (mask == CLUSTER_MASK_SERVER && emberAfClusterIsServer(cluster))))
             {
-                if (index)
+                if (cluster->clusterId == clusterId)
                 {
-                    *index = scopedIndex;
+                    if (index)
+                    {
+                        *index = scopedIndex;
+                    }
+
+                    return cluster;
                 }
 
-                return cluster;
+                scopedIndex++;
             }
-
-            scopedIndex++;
         }
     }
-
     return nullptr;
 }
 
@@ -703,7 +710,7 @@ uint8_t emberAfClusterIndex(EndpointId endpoint, ClusterId clusterId, EmberAfClu
     {
         // Check the endpoint id first, because that way we avoid examining the
         // endpoint type for endpoints that are not actually defined.
-        if (emAfEndpoints[ep].endpoint == endpoint)
+        if (emAfEndpoints[ep].endpoint == endpoint && emAfEndpoints[ep].endpointType != nullptr)
         {
             const EmberAfEndpointType * endpointType = emAfEndpoints[ep].endpointType;
             uint8_t index                            = 0xFF;
@@ -796,7 +803,7 @@ const EmberAfCluster * emberAfFindClusterIncludingDisabledEndpoints(EndpointId e
                                                                     EmberAfClusterMask mask)
 {
     uint16_t ep = emberAfIndexFromEndpointIncludingDisabledEndpoints(endpoint);
-    if (ep < MAX_ENDPOINT_COUNT)
+    if (ep < MAX_ENDPOINT_COUNT && emAfEndpoints[ep].endpointType != nullptr)
     {
         return emberAfFindClusterInType(emAfEndpoints[ep].endpointType, clusterId, mask);
     }
@@ -844,6 +851,7 @@ static uint16_t findIndexFromEndpoint(EndpointId endpoint, bool ignoreDisabledEn
     for (epi = 0; epi < emberAfEndpointCount(); epi++)
     {
         if (emAfEndpoints[epi].endpoint == endpoint &&
+            emAfEndpoints[epi].endpointType != nullptr &&
             (!ignoreDisabledEndpoints || emAfEndpoints[epi].bitmask & EMBER_AF_ENDPOINT_ENABLED))
         {
             return epi;
@@ -874,6 +882,11 @@ bool emberAfEndpointEnableDisable(EndpointId endpoint, bool enable)
     bool currentlyEnabled;
 
     if (kEmberInvalidEndpointIndex == index)
+    {
+        return false;
+    }
+
+    if (emAfEndpoints[index].endpointType == nullptr)
     {
         return false;
     }
