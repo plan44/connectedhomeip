@@ -70,7 +70,9 @@ CHIP_ERROR PlatformManagerImpl::_InitChipStack()
 
     mStartTime = System::SystemClock().GetMonotonicTimestamp();
 
+#if CHIP_SYSTEM_CONFIG_USE_DISPATCH
     static_cast<System::LayerSocketsLoop &>(DeviceLayer::SystemLayer()).SetDispatchQueue(GetWorkQueue());
+#endif
 
 exit:
     return err;

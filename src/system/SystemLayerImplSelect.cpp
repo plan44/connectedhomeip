@@ -82,11 +82,24 @@ void LayerImplSelect::Shutdown()
     {
         w.DisableAndClear();
     }
+#elif CHIP_SYSTEM_CONFIG_USE_LIBEV
+    TimerList::Node * timer;
+    while ((timer = mTimerList.PopEarliest()) != nullptr)
+    {
+      if (ev_is_active(&timer->mLibEvTimer)) {
+        ev_timer_stop(mLibEvLoopP, &timer->mLibEvTimer);
+      }
+    }
+    mTimerPool.ReleaseAll();
 
-#else  // CHIP_SYSTEM_CONFIG_USE_DISPATCH
+    for (auto & w : mSocketWatchPool)
+    {
+        w.DisableAndClear();
+    }
+#else
     mTimerList.Clear();
     mTimerPool.ReleaseAll();
-#endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH
+#endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH/LIBEV
 
     mWakeEvent.Close(*this);
 
@@ -155,7 +168,20 @@ CHIP_ERROR LayerImplSelect::StartTimer(Clock::Timeout delay, TimerCompleteCallba
         dispatch_resume(timerSource);
         return CHIP_NO_ERROR;
     }
-#endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH
+#elif CHIP_SYSTEM_CONFIG_USE_LIBEV
+    if (mLibEvLoopP == nullptr)
+    {
+        chipDie();
+    }
+    ev_timer_init(&timer->mLibEvTimer, &LayerImplSelect::HandleLibEvTimer, 1, 0);
+    timer->mLibEvTimer.data = timer;
+    auto t = Clock::Milliseconds64(delay).count();
+    ev_timer_set(&timer->mLibEvTimer, static_cast<double>(t)/1E3, 0.);
+    (void) mTimerList.Add(timer);
+    ev_timer_start(mLibEvLoopP, &timer->mLibEvTimer);
+    return CHIP_NO_ERROR;
+#endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH/LIBEV
+
 
     if (mTimerList.Add(timer) == timer)
     {
@@ -178,7 +204,13 @@ void LayerImplSelect::CancelTimer(TimerCompleteCallback onComplete, void * appSt
         dispatch_source_cancel(timer->mTimerSource);
         dispatch_release(timer->mTimerSource);
     }
-#endif
+#elif CHIP_SYSTEM_CONFIG_USE_LIBEV
+    if (mLibEvLoopP == nullptr)
+    {
+        chipDie();
+    }
+    ev_timer_stop(mLibEvLoopP, &timer->mLibEvTimer);
+#endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH/LIBEV
 
     mTimerPool.Release(timer);
     Signal();
@@ -197,8 +229,11 @@ CHIP_ERROR LayerImplSelect::ScheduleWork(TimerCompleteCallback onComplete, void 
         });
         return CHIP_NO_ERROR;
     }
-#endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH
-
+#endif
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+    // just a timer with no delay
+    return StartTimer(Clock::Timeout(0), onComplete, appState);
+#else
     CancelTimer(onComplete, appState);
 
     TimerList::Node * timer = mTimerPool.Create(*this, SystemClock().GetMonotonicTimestamp(), onComplete, appState);
@@ -210,6 +245,7 @@ CHIP_ERROR LayerImplSelect::ScheduleWork(TimerCompleteCallback onComplete, void 
         Signal();
     }
     return CHIP_NO_ERROR;
+#endif // !CHIP_SYSTEM_CONFIG_USE_LIBEV
 }
 
 CHIP_ERROR LayerImplSelect::StartWatchingSocket(int fd, SocketWatchToken * tokenOut)
@@ -231,6 +267,11 @@ CHIP_ERROR LayerImplSelect::StartWatchingSocket(int fd, SocketWatchToken * token
     VerifyOrReturnError(watch != nullptr, CHIP_ERROR_ENDPOINT_POOL_FULL);
 
     watch->mFD = fd;
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+    ev_io_init(&watch->mIoWatcher, &LayerImplSelect::HandleLibEvIoWatcher, 0, 0);
+    watch->mIoWatcher.data = watch;
+    watch->mLayerImplSelectP = this;
+#endif
 
     *tokenOut = reinterpret_cast<SocketWatchToken>(watch);
     return CHIP_NO_ERROR;
@@ -283,6 +324,25 @@ CHIP_ERROR LayerImplSelect::RequestCallbackOnPendingRead(SocketWatchToken token)
             dispatch_activate(watch->mRdSource);
         }
     }
+#elif CHIP_SYSTEM_CONFIG_USE_LIBEV
+    if (mLibEvLoopP == nullptr)
+    {
+        chipDie();
+    }
+    int evs =
+        (watch->mPendingIO.Has(SocketEventFlags::kRead) ? EV_READ : 0) |
+        (watch->mPendingIO.Has(SocketEventFlags::kWrite) ? EV_WRITE : 0);
+    if (!ev_is_active(&watch->mIoWatcher))
+    {
+        // First time actually using that watch
+        ev_io_set(&watch->mIoWatcher, watch->mFD, evs);
+        ev_io_start(mLibEvLoopP, &watch->mIoWatcher);
+    }
+    else
+    {
+        // already active, just change flags
+        ev_io_modify(&watch->mIoWatcher, evs);
+    }
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH
 
     return CHIP_NO_ERROR;
@@ -326,6 +386,25 @@ CHIP_ERROR LayerImplSelect::RequestCallbackOnPendingWrite(SocketWatchToken token
             dispatch_activate(watch->mWrSource);
         }
     }
+#elif CHIP_SYSTEM_CONFIG_USE_LIBEV
+    if (mLibEvLoopP == nullptr)
+    {
+        chipDie();
+    }
+    int evs =
+        (watch->mPendingIO.Has(SocketEventFlags::kRead) ? EV_READ : 0) |
+        (watch->mPendingIO.Has(SocketEventFlags::kWrite) ? EV_WRITE : 0);
+    if (!ev_is_active(&watch->mIoWatcher))
+    {
+        // First time actually using that watch
+        ev_io_set(&watch->mIoWatcher, watch->mFD, evs);
+        ev_io_start(mLibEvLoopP, &watch->mIoWatcher);
+    }
+    else
+    {
+        // already active, just change flags
+        ev_io_modify(&watch->mIoWatcher, evs);
+    }
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH
 
     return CHIP_NO_ERROR;
@@ -338,6 +417,13 @@ CHIP_ERROR LayerImplSelect::ClearCallbackOnPendingRead(SocketWatchToken token)
 
     watch->mPendingIO.Clear(SocketEventFlags::kRead);
 
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+    if (ev_is_active(&watch->mIoWatcher) && watch->mPendingIO.Raw() == 0) {
+        // all flags cleared now, stop watching
+        ev_io_stop(mLibEvLoopP, &watch->mIoWatcher);
+    }
+#endif
+
     return CHIP_NO_ERROR;
 }
 
@@ -347,6 +433,13 @@ CHIP_ERROR LayerImplSelect::ClearCallbackOnPendingWrite(SocketWatchToken token)
     VerifyOrReturnError(watch != nullptr, CHIP_ERROR_INVALID_ARGUMENT);
 
     watch->mPendingIO.Clear(SocketEventFlags::kWrite);
+
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+    if (ev_is_active(&watch->mIoWatcher) && watch->mPendingIO.Raw() == 0) {
+        // all flags cleared now, stop watching
+        ev_io_stop(mLibEvLoopP, &watch->mIoWatcher);
+    }
+#endif
 
     return CHIP_NO_ERROR;
 }
@@ -499,7 +592,40 @@ void LayerImplSelect::HandleTimerComplete(TimerList::Node * timer)
     mTimerList.Remove(timer);
     mTimerPool.Invoke(timer);
 }
-#endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH
+#endif
+
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+void LayerImplSelect::HandleLibEvTimer(EV_P_ struct ev_timer *t, int revents)
+{
+    TimerList::Node * timer = static_cast<TimerList::Node *>(t->data);
+    VerifyOrDie(timer);
+    LayerImplSelect* layerP = dynamic_cast<LayerImplSelect*>(timer->mCallback.mSystemLayer);
+    VerifyOrDie(layerP);
+    layerP->mTimerList.Remove(timer);
+    layerP->mTimerPool.Invoke(timer);
+}
+
+void LayerImplSelect::HandleLibEvIoWatcher(EV_P_ struct ev_io *i, int revents)
+{
+    SocketWatch * watch = static_cast<SocketWatch *>(i->data);
+    if (watch != nullptr && watch->mCallback != nullptr && watch->mLayerImplSelectP != nullptr) {
+        SocketEvents events;
+        if (revents & EV_READ)
+        {
+            events.Set(SocketEventFlags::kRead);
+        }
+        if (revents & EV_WRITE)
+        {
+            events.Set(SocketEventFlags::kWrite);
+        }
+        if (events.HasAny())
+        {
+            watch->mCallback(events, watch->mCallbackData);
+        }
+    }
+}
+#endif // CHIP_SYSTEM_CONFIG_USE_LIBEV
+
 
 void LayerImplSelect::SocketWatch::Clear()
 {
@@ -510,6 +636,8 @@ void LayerImplSelect::SocketWatch::Clear()
 #if CHIP_SYSTEM_CONFIG_USE_DISPATCH
     mRdSource = nullptr;
     mWrSource = nullptr;
+#elif CHIP_SYSTEM_CONFIG_USE_LIBEV
+    mLayerImplSelectP = nullptr;
 #endif
 }
 
@@ -525,6 +653,14 @@ void LayerImplSelect::SocketWatch::DisableAndClear()
     {
         dispatch_source_cancel(mWrSource);
         dispatch_release(mWrSource);
+    }
+    Clear();
+}
+#elif CHIP_SYSTEM_CONFIG_USE_LIBEV
+void LayerImplSelect::SocketWatch::DisableAndClear()
+{
+    if (mLayerImplSelectP!=nullptr && mLayerImplSelectP->mLibEvLoopP != nullptr) {
+        ev_io_stop(mLayerImplSelectP->mLibEvLoopP, &mIoWatcher);
     }
     Clear();
 }
