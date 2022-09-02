@@ -385,7 +385,10 @@ CHIP_ERROR LayerImplSelect::RequestCallbackOnPendingRead(SocketWatchToken token)
     else
     {
         // already active, just change flags
+        // Note: changing flags only reliably works when the watcher is stopped
+        ev_io_stop(mLibEvLoopP, &watch->mIoWatcher);
         ev_io_modify(&watch->mIoWatcher, evs);
+        ev_io_start(mLibEvLoopP, &watch->mIoWatcher);
     }
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH
 
@@ -445,7 +448,10 @@ CHIP_ERROR LayerImplSelect::RequestCallbackOnPendingWrite(SocketWatchToken token
     else
     {
         // already active, just change flags
+        // Note: changing flags only reliably works when the watcher is stopped
+        ev_io_stop(mLibEvLoopP, &watch->mIoWatcher);
         ev_io_modify(&watch->mIoWatcher, evs);
+        ev_io_start(mLibEvLoopP, &watch->mIoWatcher);
     }
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH
 
