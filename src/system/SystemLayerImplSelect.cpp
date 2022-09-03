@@ -242,8 +242,17 @@ CHIP_ERROR LayerImplSelect::ScheduleWork(TimerCompleteCallback onComplete, void 
         return CHIP_NO_ERROR;
     }
 #elif CHIP_SYSTEM_CONFIG_USE_LIBEV
-    // just a timer with no delay
-    return StartTimer(Clock::Timeout(0), onComplete, appState);
+    // schedule as timer with no delay, but do NOT cancel previous timers with same onComplete/appState!
+    TimerList::Node * timer = mTimerPool.Create(*this, SystemClock().GetMonotonicTimestamp(), onComplete, appState);
+    VerifyOrReturnError(timer != nullptr, CHIP_ERROR_NO_MEMORY);
+    VerifyOrDie(mLibEvLoopP != nullptr);
+    ev_timer_init(&timer->mLibEvTimer, &LayerImplSelect::HandleLibEvTimer, 1, 0);
+    timer->mLibEvTimer.data = timer;
+    auto t                  = Clock::Milliseconds64(0).count();
+    ev_timer_set(&timer->mLibEvTimer, static_cast<double>(t) / 1E3, 0.);
+    (void) mTimerList.Add(timer);
+    ev_timer_start(mLibEvLoopP, &timer->mLibEvTimer);
+    return CHIP_NO_ERROR;
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH/LIBEV
 #if !CHIP_SYSTEM_CONFIG_USE_LIBEV
     // Note: dispatch based implementation needs this as fallback, but not LIBEV (and dead code is not allowed with -Werror)
