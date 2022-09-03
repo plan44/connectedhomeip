@@ -162,10 +162,7 @@ CHIP_ERROR LayerImplSelect::StartTimer(Clock::Timeout delay, TimerCompleteCallba
     {
         (void) mTimerList.Add(timer);
         dispatch_source_t timerSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, DISPATCH_TIMER_STRICT, dispatchQueue);
-        if (timerSource == nullptr)
-        {
-            chipDie();
-        }
+        VerifyOrDie(timerSource != nullptr);
 
         timer->mTimerSource = timerSource;
         dispatch_source_set_timer(
@@ -181,10 +178,7 @@ CHIP_ERROR LayerImplSelect::StartTimer(Clock::Timeout delay, TimerCompleteCallba
         return CHIP_NO_ERROR;
     }
 #elif CHIP_SYSTEM_CONFIG_USE_LIBEV
-    if (mLibEvLoopP == nullptr)
-    {
-        chipDie();
-    }
+    VerifyOrDie(mLibEvLoopP != nullptr);
     ev_timer_init(&timer->mLibEvTimer, &LayerImplSelect::HandleLibEvTimer, 1, 0);
     timer->mLibEvTimer.data = timer;
     auto t                  = Clock::Milliseconds64(delay).count();
@@ -218,10 +212,7 @@ void LayerImplSelect::CancelTimer(TimerCompleteCallback onComplete, void * appSt
         dispatch_release(timer->mTimerSource);
     }
 #elif CHIP_SYSTEM_CONFIG_USE_LIBEV
-    if (mLibEvLoopP == nullptr)
-    {
-        chipDie();
-    }
+    VerifyOrDie(mLibEvLoopP != nullptr);
     ev_timer_stop(mLibEvLoopP, &timer->mLibEvTimer);
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH/LIBEV
 
@@ -339,10 +330,7 @@ CHIP_ERROR LayerImplSelect::RequestCallbackOnPendingRead(SocketWatchToken token)
         }
     }
 #elif CHIP_SYSTEM_CONFIG_USE_LIBEV
-    if (mLibEvLoopP == nullptr)
-    {
-        chipDie();
-    }
+    VerifyOrDie(mLibEvLoopP != nullptr);
     int evs = (watch->mPendingIO.Has(SocketEventFlags::kRead) ? EV_READ : 0) |
         (watch->mPendingIO.Has(SocketEventFlags::kWrite) ? EV_WRITE : 0);
     if (!ev_is_active(&watch->mIoWatcher))
@@ -402,10 +390,7 @@ CHIP_ERROR LayerImplSelect::RequestCallbackOnPendingWrite(SocketWatchToken token
         }
     }
 #elif CHIP_SYSTEM_CONFIG_USE_LIBEV
-    if (mLibEvLoopP == nullptr)
-    {
-        chipDie();
-    }
+    VerifyOrDie(mLibEvLoopP != nullptr);
     int evs = (watch->mPendingIO.Has(SocketEventFlags::kRead) ? EV_READ : 0) |
         (watch->mPendingIO.Has(SocketEventFlags::kWrite) ? EV_WRITE : 0);
     if (!ev_is_active(&watch->mIoWatcher))
@@ -618,9 +603,9 @@ void LayerImplSelect::HandleTimerComplete(TimerList::Node * timer)
 void LayerImplSelect::HandleLibEvTimer(EV_P_ struct ev_timer * t, int revents)
 {
     TimerList::Node * timer = static_cast<TimerList::Node *>(t->data);
-    VerifyOrDie(timer);
+    VerifyOrDie(timer != nullptr);
     LayerImplSelect * layerP = dynamic_cast<LayerImplSelect *>(timer->mCallback.mSystemLayer);
-    VerifyOrDie(layerP);
+    VerifyOrDie(layerP != nullptr);
     layerP->mTimerList.Remove(timer);
     layerP->mTimerPool.Invoke(timer);
 }
