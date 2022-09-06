@@ -75,6 +75,10 @@ private:
     bool _IsChipStackLockedByCurrentThread() const;
 #endif
 
+#if !CHIP_SYSTEM_CONFIG_USE_DISPATCH
+    static void _DispatchEventViaScheduleWork(System::Layer * aLayer, void * appState);
+#endif
+
     // ===== Members for internal use by the following friends.
 
     friend PlatformManager & PlatformMgr(void);
@@ -112,7 +116,7 @@ inline PlatformManager & PlatformMgr(void)
  * Returns the platform-specific implementation of the PlatformManager singleton object.
  *
  * chip applications can use this to gain access to features of the PlatformManager
- * that are specific to the ESP32 platform.
+ * that are specific to the Darwin platform.
  */
 inline PlatformManagerImpl & PlatformMgrImpl(void)
 {
