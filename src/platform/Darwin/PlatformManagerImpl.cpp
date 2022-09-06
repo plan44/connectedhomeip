@@ -133,13 +133,45 @@ void PlatformManagerImpl::_RunEventLoop()
     mRunLoopSem = nullptr;
 }
 
+void PlatformManagerImpl::_Shutdown()
+{
+    // Call up to the base class _Shutdown() to perform the bulk of the shutdown.
+    GenericPlatformManagerImpl<ImplClass>::_Shutdown();
+}
+
+
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+// EXPERIMENTAL luz private hack to allow libev on darwin devel setup
+void PlatformManagerImpl::_DispatchEventViaScheduleWork(System::Layer * aLayer, void * appState)
+{
+  const ChipDeviceEvent* event = static_cast<const ChipDeviceEvent*>(appState);
+  PlatformMgrImpl().DispatchEvent(event);
+  delete event;
+}
+#endif // CHIP_SYSTEM_CONFIG_USE_LIBEV
+
 CHIP_ERROR PlatformManagerImpl::_PostEvent(const ChipDeviceEvent * event)
 {
+    #if !CHIP_SYSTEM_CONFIG_USE_DISPATCH
+    // EXPERIMENTAL luz private hack to allow libev on darwin devel setup
+    // - make a copy to pass to handler
+    ChipDeviceEvent* eventCopyP = new ChipDeviceEvent;
+    VerifyOrDie(eventCopyP != nullptr);
+    *eventCopyP = *event;
+    SystemLayer().ScheduleWork(&PlatformManagerImpl::_DispatchEventViaScheduleWork, eventCopyP);
+    return CHIP_NO_ERROR;
+    #else
+    if (mWorkQueue == nullptr)
+    {
+        return CHIP_ERROR_INCORRECT_STATE;
+    }
+
     const ChipDeviceEvent eventCopy = *event;
     dispatch_async(mWorkQueue, ^{
         DispatchEvent(&eventCopy);
     });
     return CHIP_NO_ERROR;
+    #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH
 }
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH
 

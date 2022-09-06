@@ -85,6 +85,10 @@ private:
     bool _IsChipStackLockedByCurrentThread() const;
 #endif
 
+#if !CHIP_SYSTEM_CONFIG_USE_DISPATCH
+    static void _DispatchEventViaScheduleWork(System::Layer * aLayer, void * appState);
+#endif
+
     // ===== Members for internal use by the following friends.
 
     friend PlatformManager & PlatformMgr(void);
