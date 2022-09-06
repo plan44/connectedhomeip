@@ -101,11 +101,15 @@ private:
 
     inline ImplClass * Impl() { return static_cast<ImplClass *>(this); }
 
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+    void _DispatchEventViaScheduleWork(System::Layer * aLayer, void * appState);
+#else
     void ProcessDeviceEvents();
 
     DeviceSafeQueue mChipEventQueue;
     std::atomic<bool> mShouldRunEventLoop{ true };
     static void * EventLoopTaskMain(void * arg);
+#endif
 };
 
 // Instruct the compiler to instantiate the template only when explicitly told to do so.

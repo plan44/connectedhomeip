@@ -128,15 +128,37 @@ CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_StartChipTimer(System::
     return CHIP_NO_ERROR;
 }
 
+
+
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+void enericPlatformManagerImpl_POSIX<ImplClass>::_DispatchEventViaScheduleWork(System::Layer * aLayer, void * appState)
+{
+  const ChipDeviceEvent* event = static_cast<const ChipDeviceEvent*>(appState);
+  PlatformMgrImpl().DispatchEvent(event);
+  delete event;
+}
+#endif // CHIP_SYSTEM_CONFIG_USE_LIBEV
+
+
 template <class ImplClass>
 CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_PostEvent(const ChipDeviceEvent * event)
 {
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+    // Schedule dispatching this event via System Layer's ScheduleWork
+    ChipDeviceEvent* eventCopyP = new ChipDeviceEvent;
+    VerifyOrDie(eventCopyP != nullptr);
+    *eventCopyP = *event;
+    SystemLayer().ScheduleWork(&PlatformManagerImpl::_DispatchEventViaScheduleWork, eventCopyP);
+    return CHIP_NO_ERROR;
+#else
     mChipEventQueue.Push(*event);
 
     SystemLayerSocketsLoop().Signal(); // Trigger wake select on CHIP thread
     return CHIP_NO_ERROR;
+#endif // CHIP_SYSTEM_CONFIG_USE_LIBEV
 }
 
+#if !CHIP_SYSTEM_CONFIG_USE_LIBEV
 template <class ImplClass>
 void GenericPlatformManagerImpl_POSIX<ImplClass>::ProcessDeviceEvents()
 {
@@ -146,6 +168,7 @@ void GenericPlatformManagerImpl_POSIX<ImplClass>::ProcessDeviceEvents()
         Impl()->DispatchEvent(&event);
     }
 }
+#endif // !CHIP_SYSTEM_CONFIG_USE_LIBEV
 
 template <class ImplClass>
 void GenericPlatformManagerImpl_POSIX<ImplClass>::_RunEventLoop()
