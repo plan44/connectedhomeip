@@ -268,13 +268,21 @@ CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_StartEventLoopTask()
 #endif // CHIP_SYSTEM_CONFIG_USE_LIBEV
 }
 
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+// fallback implementation
+void __attribute__((weak)) ExitExternalMainLoop()
+{
+  // FIXME: implement better exit
+  VerifyOrDieWithMsg(false, DeviceLayer, "Missing custom ExitExternalMainLoop() implementation for clean shutdown -> just die");
+}
+#endif // CHIP_SYSTEM_CONFIG_USE_LIBEV
+
 template <class ImplClass>
 CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_StopEventLoopTask()
 {
 #if CHIP_SYSTEM_CONFIG_USE_LIBEV
-    // with libev, we dont need our own mainloop
-    // FIXME: implement better exit
-    VerifyOrDieWithMsg(false, DeviceLayer, "_StopEventLoopTask() in CHIP_SYSTEM_CONFIG_USE_LIBEV called");
+    // with libev, the mainloop is set up and managed externally
+    ExitExternalMainLoop(); // this callback needs to be implemented.
     return CHIP_NO_ERROR;
 #else
     int err = 0;
