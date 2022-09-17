@@ -128,10 +128,9 @@ CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_StartChipTimer(System::
     return CHIP_NO_ERROR;
 }
 
-
-
 #if CHIP_SYSTEM_CONFIG_USE_LIBEV
-void enericPlatformManagerImpl_POSIX<ImplClass>::_DispatchEventViaScheduleWork(System::Layer * aLayer, void * appState)
+template <class ImplClass>
+void GenericPlatformManagerImpl_POSIX<ImplClass>::_DispatchEventViaScheduleWork(System::Layer * aLayer, void * appState)
 {
   const ChipDeviceEvent* event = static_cast<const ChipDeviceEvent*>(appState);
   PlatformMgrImpl().DispatchEvent(event);
@@ -148,7 +147,7 @@ CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_PostEvent(const ChipDev
     ChipDeviceEvent* eventCopyP = new ChipDeviceEvent;
     VerifyOrDie(eventCopyP != nullptr);
     *eventCopyP = *event;
-    SystemLayer().ScheduleWork(&PlatformManagerImpl::_DispatchEventViaScheduleWork, eventCopyP);
+    SystemLayer().ScheduleWork(&_DispatchEventViaScheduleWork, eventCopyP);
     return CHIP_NO_ERROR;
 #else
     mChipEventQueue.Push(*event);
@@ -225,6 +224,7 @@ void GenericPlatformManagerImpl_POSIX<ImplClass>::_RunEventLoop()
     mState.store(State::kStopped, std::memory_order_relaxed);
 }
 
+#if !CHIP_SYSTEM_CONFIG_USE_LIBEV
 template <class ImplClass>
 void * GenericPlatformManagerImpl_POSIX<ImplClass>::EventLoopTaskMain(void * arg)
 {
@@ -232,6 +232,7 @@ void * GenericPlatformManagerImpl_POSIX<ImplClass>::EventLoopTaskMain(void * arg
     static_cast<GenericPlatformManagerImpl_POSIX<ImplClass> *>(arg)->Impl()->RunEventLoop();
     return nullptr;
 }
+#endif // !CHIP_SYSTEM_CONFIG_USE_LIBEV
 
 template <class ImplClass>
 CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_StartEventLoopTask()
@@ -248,6 +249,10 @@ CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_StartEventLoopTask()
     VerifyOrReturnError(err == 0, CHIP_ERROR_POSIX(err));
 #endif
 
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+    // with libev, we dont need our own mainloop
+    return CHIP_NO_ERROR;
+#else
     //
     // We need to grab the lock here since we have to protect setting
     // mHasValidChipTask, which will be read right away upon creating the
@@ -265,11 +270,18 @@ CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_StartEventLoopTask()
     pthread_mutex_unlock(&mStateLock);
 
     return CHIP_ERROR_POSIX(err);
+#endif // CHIP_SYSTEM_CONFIG_USE_LIBEV
 }
 
 template <class ImplClass>
 CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_StopEventLoopTask()
 {
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+    // with libev, we dont need our own mainloop
+    // FIXME: implement better exit
+    VerifyOrDieWithMsg(false, DeviceLayer, "_StopEventLoopTask() in CHIP_SYSTEM_CONFIG_USE_LIBEV called");
+    return CHIP_NO_ERROR;
+#else
     int err = 0;
 
     //
@@ -322,6 +334,7 @@ CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_StopEventLoopTask()
 
 exit:
     return CHIP_ERROR_POSIX(err);
+#endif // CHIP_SYSTEM_CONFIG_USE_LIBEV
 }
 
 template <class ImplClass>
