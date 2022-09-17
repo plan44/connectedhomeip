@@ -130,5 +130,13 @@ inline PlatformManagerImpl & PlatformMgrImpl(void)
     return PlatformManagerImpl::sInstance;
 }
 
+#if !CHIP_SYSTEM_CONFIG_USE_DISPATCH
+namespace Internal {
+
+void ExitExternalMainLoop();
+
+} // namespace Internal
+#endif // !CHIP_SYSTEM_CONFIG_USE_DISPATCH
+
 } // namespace DeviceLayer
 } // namespace chip
