@@ -120,6 +120,11 @@ private:
 // Instruct the compiler to instantiate the template only when explicitly told to do so.
 extern template class GenericPlatformManagerImpl_POSIX<PlatformManagerImpl>;
 
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+// with external libev mainloop, this should be implemented externally to terminate the mainloop cleanly
+// (Note that there is a weak default implementation that just calls chipDie() when the external implementation is missing)
+extern void ExitExternalMainLoop();
+#endif
 } // namespace Internal
 } // namespace DeviceLayer
 } // namespace chip
