@@ -20,6 +20,7 @@ import("${build_root}/config/openwrt/config.gni")
 import("${build_root}/toolchain/gcc_toolchain.gni")
 
 template("openwrt_toolchain") {
+
   _invoker_toolchain_args = invoker.toolchain_args
 
   _openwrt_toolchain_args = {
@@ -29,9 +30,9 @@ template("openwrt_toolchain") {
     forward_variables_from(_invoker_toolchain_args, "*")
   }
 
-  # TODO: parametrize openwrt architecture (mipsel only for now)
+  # Openwrt toolchain uses compilers from the openwrt buildroot
   _openwrt_toolchain_prefix =
-      "${openwrt_sdk_root}/staging_dir/toolchain-mipsel_24kc_gcc-11.2.0_musl/bin/mipsel-openwrt-linux-"
+    "${_openwrt_toolchain_args.toolchain_prefix}-"
 
   gcc_toolchain(target_name) {
     toolchain_args = _openwrt_toolchain_args

@@ -16,9 +16,11 @@
 
 import("openwrt_toolchain.gni")
 
-openwrt_toolchain("openwrt_mips") {
+
+openwrt_toolchain("openwrt_${target_cpu}") {
   toolchain_args = {
-    current_cpu = "mips"
-    mips_arch = "mipsel"
+    toolchain_prefix = openwrt_toolchain_prefix
+    sdk_root = openwrt_sdk_root
   }
 }
+

@@ -20,4 +20,7 @@ declare_args() {
 
   # Location of the OpenWrt SDK.
   openwrt_sdk_root = ""
+
+  # toolchain prefix (full path)
+  openwrt_toolchain_prefix = ""
 }
