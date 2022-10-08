@@ -1,24 +1,25 @@
-# Matter
+# plan44 fork of connectedhomeip (matter SDK)
 
-[![Builds](https://github.com/project-chip/connectedhomeip/workflows/Builds/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/build.yaml)
+This is a fork of the original [connectedhomeip github repository](https://github.com/project-chip/connectedhomeip).
 
-[![Examples - EFR32](https://github.com/project-chip/connectedhomeip/workflows/Build%20example%20-%20EFR32/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/examples-efr32.yaml)
-[![Examples - ESP32](https://github.com/project-chip/connectedhomeip/workflows/Build%20example%20-%20ESP32/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/examples-esp32.yaml)
-[![Examples - i.MX Linux](https://github.com/project-chip/connectedhomeip/workflows/Build%20example%20-%20i.MX%20Linux/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/examples-linux-imx.yaml)
-[![Examples - K32W with SE051](https://github.com/project-chip/connectedhomeip/workflows/Build%20example%20-%20K32W%20with%20SE051/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/examples-k32w.yaml)
-[![Examples - Linux Standalone](https://github.com/project-chip/connectedhomeip/workflows/Build%20example%20-%20Linux%20Standalone/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/examples-linux-standalone.yaml)
-[![Examples - nRF Connect SDK](https://github.com/project-chip/connectedhomeip/workflows/Build%20example%20-%20nRF%20Connect%20SDK/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/examples-nrfconnect.yaml)
-[![Examples - QPG](https://github.com/project-chip/connectedhomeip/workflows/Build%20example%20-%20QPG/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/examples-qpg.yaml)
-[![Examples - TI CC26X2X7](https://github.com/project-chip/connectedhomeip/workflows/Build%20example%20-%20TI%20CC26X2X7/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/examples-cc13x2x7_26x2x7.yaml)
-[![Build example - Infineon](https://github.com/project-chip/connectedhomeip/actions/workflows/examples-infineon.yaml/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/examples-infineon.yaml)
+The purpose of this fork are changes and additions **to be able to build matter SDK based applications for [openwrt](https://github.com/openwrt/openwrt)**, in particular "bridge" implementations.
 
-[![Android](https://github.com/project-chip/connectedhomeip/workflows/Android/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/android.yaml)
+For that, the following changes were applied:
 
-[![Unit / Interation Tests](https://github.com/project-chip/connectedhomeip/workflows/Unit%20/%20Interation%20Tests/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/unit_integration_test.yaml)
-[![Cirque](https://github.com/project-chip/connectedhomeip/workflows/Cirque/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/cirque.yaml)
-[![QEMU](https://github.com/project-chip/connectedhomeip/workflows/QEMU/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/qemu.yaml)
+- As connectedhomeip with all submodules is *huge*, `.gitmodules` is edited to contain only those modules needed for targeting linux. This is to avoid that a `git submodule update --recursive` pulls gigabytes of stuff not needed in this context (mostly SDKs for various embedded targets).
 
-[![ZAP Templates](https://github.com/project-chip/connectedhomeip/workflows/ZAP/badge.svg)](https://github.com/project-chip/connectedhomeip/actions/workflows/zap_templates.yaml)
+- Adds and edits build files (.gn, .gni) for prodviding a new target_os `openwrt` which allows building for openwrt linux targets.
+
+- Adds modifictations needed for dynamic endpoint scenarios in real bridge apps (gaps in the dynamic endpoint numbering).
+
+- Adds an option to the build system for custom cluster implementations (native ZAP cluster implementations are designed for direct hardware control, bridging needs alternative implementations)
+
+- Add support for running the chip stack on a `libev` based mainloop.
+
+**Note:** The `luz` branch of this fork is rebased often on top of actual connectedhomeip/matter progress. It should be understood more as a patch set on top of connectedhomeip/matter than a stable branch.
+
+----
+Original connectedhomeip README.md text (minus CI headers) from here:
 
 # What is Matter?
 
