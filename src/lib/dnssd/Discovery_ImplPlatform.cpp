@@ -489,7 +489,13 @@ CHIP_ERROR DiscoveryImplPlatform::PublishService(const char * serviceType, TextE
     VerifyOrReturnError(mState == State::kInitialized, CHIP_ERROR_INCORRECT_STATE);
 
     DnssdService service;
-    ReturnErrorOnFailure(MakeHostName(service.mHostName, sizeof(service.mHostName), mac));
+
+#if CHIP_CONFIG_PLATFORM_DNSSD_DO_NOT_SET_HOSTNAME
+    service.mHostName[0] = 0; // Host name must not be changed
+#else
+    ReturnErrorOnFailure(MakeHostName(service.mHostName, sizeof(service.mHostName), mac)); // build hostname from MAC address
+#endif
+
     ReturnErrorOnFailure(protocol == DnssdServiceProtocol::kDnssdProtocolTcp
                              ? MakeInstanceName(service.mName, sizeof(service.mName), peerId)
                              : GetCommissionableInstanceName(service.mName, sizeof(service.mName)));

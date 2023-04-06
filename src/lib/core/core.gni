@@ -84,6 +84,9 @@ declare_args() {
 
   # When using minmdns, set the number of parallel resolves
   chip_config_minmdns_max_parallel_resolves = 2
+
+  # When using platform dns-sd, do not prevent setting the hostname
+  chip_config_platform_dnssd_do_not_set_hostname = false
 }
 
 if (chip_target_style == "") {

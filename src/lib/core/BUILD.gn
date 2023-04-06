@@ -64,6 +64,7 @@ buildconfig_header("chip_buildconfig") {
     "CHIP_CONFIG_TRANSPORT_PW_TRACE_ENABLED=${chip_enable_transport_pw_trace}",
     "CHIP_CONFIG_MINMDNS_DYNAMIC_OPERATIONAL_RESPONDER_LIST=${chip_config_minmdns_dynamic_operational_responder_list}",
     "CHIP_CONFIG_MINMDNS_MAX_PARALLEL_RESOLVES=${chip_config_minmdns_max_parallel_resolves}",
+    "CHIP_CONFIG_PLATFORM_DNSSD_DO_NOT_SET_HOSTNAME=${chip_config_platform_dnssd_do_not_set_hostname}",
   ]
 }
 
