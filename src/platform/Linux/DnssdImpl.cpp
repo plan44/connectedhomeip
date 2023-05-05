@@ -428,11 +428,11 @@ CHIP_ERROR MdnsAvahi::PublishService(const DnssdService & service, DnssdPublishC
 {
     std::ostringstream keyBuilder;
     std::string key;
-    std::string type       = GetFullType(service.mType, service.mProtocol);
+    std::string type = GetFullType(service.mType, service.mProtocol);
     std::string matterHostname;
-    CHIP_ERROR error       = CHIP_NO_ERROR;
-    AvahiStringList * text = nullptr;
-    AvahiEntryGroup *group = nullptr;
+    CHIP_ERROR error          = CHIP_NO_ERROR;
+    AvahiStringList * text    = nullptr;
+    AvahiEntryGroup * group   = nullptr;
     const char * mainHostname = nullptr;
     AvahiIfIndex interface =
         service.mInterface.IsPresent() ? static_cast<AvahiIfIndex>(service.mInterface.GetPlatformInterface()) : AVAHI_IF_UNSPEC;
@@ -446,7 +446,7 @@ CHIP_ERROR MdnsAvahi::PublishService(const DnssdService & service, DnssdPublishC
     {
         // same service was already published, we need to de-publish it first
         int avahiRet = avahi_entry_group_free(it->second);
-        if (avahiRet!= AVAHI_OK)
+        if (avahiRet != AVAHI_OK)
         {
             ChipLogError(DeviceLayer, "Cannot remove avahi group: %s", avahi_strerror(avahiRet));
             ExitNow(error = CHIP_ERROR_INTERNAL);
@@ -461,7 +461,8 @@ CHIP_ERROR MdnsAvahi::PublishService(const DnssdService & service, DnssdPublishC
     // establish the host name (separately from avahi's default host name that the platform might have,
     // unless it matches the matter hostname)
     mainHostname = avahi_client_get_host_name(mClient);
-    if (strcmp(mainHostname, service.mHostName)==0) {
+    if (strcmp(mainHostname, service.mHostName) == 0)
+    {
         // main host name is correct, we can use it
         matterHostname = std::string(mainHostname) + ".local";
     }
@@ -470,43 +471,43 @@ CHIP_ERROR MdnsAvahi::PublishService(const DnssdService & service, DnssdPublishC
         // we need to establish a matter hostname separately from the platform's default hostname
         char b[chip::Inet::IPAddress::kMaxStringLength];
         SuccessOrExit(service.mInterface.GetInterfaceName(b, chip::Inet::IPAddress::kMaxStringLength));
-        ChipLogDetail(DeviceLayer, "Using addresses from interface id=%d name=%s",
-                      service.mInterface.GetPlatformInterface(), b);
+        ChipLogDetail(DeviceLayer, "Using addresses from interface id=%d name=%s", service.mInterface.GetPlatformInterface(), b);
         matterHostname = std::string(service.mHostName) + ".local";
         // find addresses to publish
         for (chip::Inet::InterfaceAddressIterator it; it.HasCurrent(); it.Next())
         {
             // only specific interface?
-            if (service.mInterface.IsPresent() && it.GetInterfaceId()!=service.mInterface)
+            if (service.mInterface.IsPresent() && it.GetInterfaceId() != service.mInterface)
             {
                 continue;
             }
             if (it.IsUp())
             {
-                if (it.IsLoopback()) {
+                if (it.IsLoopback())
+                {
                     // do not advertise loopback interface addresses
                     continue;
                 }
                 chip::Inet::IPAddress addr;
                 if ((it.GetAddress(addr) == CHIP_NO_ERROR) &&
-                    ((service.mAddressType==chip::Inet::IPAddressType::kAny) ||
-                     (addr.IsIPv6() && service.mAddressType==chip::Inet::IPAddressType::kIPv6) ||
-                     (addr.IsIPv4() && service.mAddressType==chip::Inet::IPAddressType::kIPv4)
-                    )
-                ) {
-                    VerifyOrExit(addr.ToString(b)!=nullptr, error = CHIP_ERROR_INTERNAL);
+                    ((service.mAddressType == chip::Inet::IPAddressType::kAny) ||
+                     (addr.IsIPv6() && service.mAddressType == chip::Inet::IPAddressType::kIPv6) ||
+                     (addr.IsIPv4() && service.mAddressType == chip::Inet::IPAddressType::kIPv4)))
+                {
+                    VerifyOrExit(addr.ToString(b) != nullptr, error = CHIP_ERROR_INTERNAL);
                     AvahiAddress a;
-                    VerifyOrExit(avahi_address_parse(b, AVAHI_PROTO_UNSPEC, &a)!=nullptr, error = CHIP_ERROR_INTERNAL);
+                    VerifyOrExit(avahi_address_parse(b, AVAHI_PROTO_UNSPEC, &a) != nullptr, error = CHIP_ERROR_INTERNAL);
                     AvahiIfIndex interface = static_cast<AvahiIfIndex>(it.GetInterfaceId().GetPlatformInterface());
                     // Note: NO_REVERSE publish flag is needed because otherwise we can't have more than one hostname
                     //   for reverse resolving IP addresses back to hostnames
-                    VerifyOrExit(avahi_entry_group_add_address(group, // group
-                                                               interface, // interface
+                    VerifyOrExit(avahi_entry_group_add_address(group,                        // group
+                                                               interface,                    // interface
                                                                ToAvahiProtocol(addr.Type()), // protocol
-                                                               AVAHI_PUBLISH_NO_REVERSE, // publish flags
-                                                               matterHostname.c_str(), // hostname
-                                                               &a // address
-                                                               ) == 0, error = CHIP_ERROR_INTERNAL);
+                                                               AVAHI_PUBLISH_NO_REVERSE,     // publish flags
+                                                               matterHostname.c_str(),       // hostname
+                                                               &a                            // address
+                                                               ) == 0,
+                                 error = CHIP_ERROR_INTERNAL);
                 }
             }
         }
@@ -515,14 +516,14 @@ CHIP_ERROR MdnsAvahi::PublishService(const DnssdService & service, DnssdPublishC
     // create the service
     SuccessOrExit(error = MakeAvahiStringListFromTextEntries(service.mTextEntries, service.mTextEntrySize, &text));
 
-    VerifyOrExit(avahi_entry_group_add_service_strlst(group, interface, protocol, // group, interface, protocol
+    VerifyOrExit(avahi_entry_group_add_service_strlst(group, interface, protocol,        // group, interface, protocol
                                                       static_cast<AvahiPublishFlags>(0), // publish flags
-                                                      service.mName, // service name
-                                                      type.c_str(), // type
-                                                      nullptr, // domain
-                                                      matterHostname.c_str(), // host
-                                                      service.mPort, // port
-                                                      text) == 0, // TXT records StringList
+                                                      service.mName,                     // service name
+                                                      type.c_str(),                      // type
+                                                      nullptr,                           // domain
+                                                      matterHostname.c_str(),            // host
+                                                      service.mPort,                     // port
+                                                      text) == 0,                        // TXT records StringList
                  error = CHIP_ERROR_INTERNAL);
 
     // add the subtypes
@@ -532,16 +533,15 @@ CHIP_ERROR MdnsAvahi::PublishService(const DnssdService & service, DnssdPublishC
 
         sstream << service.mSubTypes[i] << "._sub." << type;
 
-        VerifyOrExit(avahi_entry_group_add_service_subtype(group, interface, protocol,
-                                                           static_cast<AvahiPublishFlags>(0), service.mName, type.c_str(),
-                                                           nullptr, sstream.str().c_str()) == 0,
+        VerifyOrExit(avahi_entry_group_add_service_subtype(group, interface, protocol, static_cast<AvahiPublishFlags>(0),
+                                                           service.mName, type.c_str(), nullptr, sstream.str().c_str()) == 0,
                      error = CHIP_ERROR_INTERNAL);
     }
     VerifyOrExit(avahi_entry_group_commit(group) == 0, error = CHIP_ERROR_INTERNAL);
 
     // group is now published, pass it to the service map
     mPublishedGroups[key] = group;
-    group = nullptr;
+    group                 = nullptr;
 
 exit:
     if (group != nullptr)
@@ -564,7 +564,8 @@ exit:
     }
     else
     {
-        ChipLogError(DeviceLayer, "PublishService failed: %s", mClient ? avahi_strerror(avahi_client_errno(mClient)) : "no mClient");
+        ChipLogError(DeviceLayer, "PublishService failed: %s",
+                     mClient ? avahi_strerror(avahi_client_errno(mClient)) : "no mClient");
         callback(context, nullptr, nullptr, error);
     }
 
@@ -574,12 +575,12 @@ exit:
 CHIP_ERROR MdnsAvahi::StopPublish()
 {
     CHIP_ERROR error = CHIP_NO_ERROR;
-    for (const auto &group: mPublishedGroups)
+    for (const auto & group : mPublishedGroups)
     {
         if (group.second)
         {
             int avahiRet = avahi_entry_group_free(group.second);
-            if (avahiRet!= AVAHI_OK)
+            if (avahiRet != AVAHI_OK)
             {
                 ChipLogError(DeviceLayer, "Error freeing avahi group: %s", avahi_strerror(avahiRet));
                 error = CHIP_ERROR_INTERNAL;
@@ -589,8 +590,6 @@ CHIP_ERROR MdnsAvahi::StopPublish()
     mPublishedGroups.clear();
     return error;
 }
-
-
 
 CHIP_ERROR MdnsAvahi::Browse(const char * type, DnssdServiceProtocol protocol, chip::Inet::IPAddressType addressType,
                              chip::Inet::InterfaceId interface, DnssdBrowseCallback callback, void * context)
