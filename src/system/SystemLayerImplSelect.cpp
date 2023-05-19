@@ -261,11 +261,11 @@ CHIP_ERROR LayerImplSelect::ScheduleWork(TimerCompleteCallback onComplete, void 
     // 1) onComplete
     // 2) appState
     // 3) The `this` pointer, because onComplete needs to be passed a pointer to
-    //
     //    the System::Layer.
-    // On a 64-bit system that's 24 bytes, but lambdas passed to ScheduleLambda
     //
+    // On a 64-bit system that's 24 bytes, but lambdas passed to ScheduleLambda
     // are capped at CHIP_CONFIG_LAMBDA_EVENT_SIZE which is 16 bytes.
+    //
     // So for now use a timer as a poor-man's closure that captures `this` and
     // onComplete and appState in a single pointer, so we fit inside the size
     // limit.
