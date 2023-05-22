@@ -172,6 +172,9 @@ void GenericPlatformManagerImpl_POSIX<ImplClass>::ProcessDeviceEvents()
 template <class ImplClass>
 void GenericPlatformManagerImpl_POSIX<ImplClass>::_RunEventLoop()
 {
+#if CHIP_SYSTEM_CONFIG_USE_LIBEV
+    VerifyOrDieWithMsg(SystemLayerSocketsLoop().GetLibEvLoop() != nullptr, DeviceLayer, "missing active libev mainloop");
+#else
     pthread_mutex_lock(&mStateLock);
 
     //
@@ -222,6 +225,7 @@ void GenericPlatformManagerImpl_POSIX<ImplClass>::_RunEventLoop()
     // Shutdown() method.
     //
     mState.store(State::kStopped, std::memory_order_relaxed);
+#endif // !CHIP_SYSTEM_CONFIG_USE_LIBEV
 }
 
 #if !CHIP_SYSTEM_CONFIG_USE_LIBEV
@@ -348,6 +352,7 @@ exit:
 template <class ImplClass>
 void GenericPlatformManagerImpl_POSIX<ImplClass>::_Shutdown()
 {
+#if !CHIP_SYSTEM_CONFIG_USE_LIBEV
     //
     // We cannot shutdown the stack while the event loop is still running. This can lead
     // to use after free errors - here we are destroying mutex and condition variable that
@@ -363,6 +368,7 @@ void GenericPlatformManagerImpl_POSIX<ImplClass>::_Shutdown()
     // and clean-up
     //
     GenericPlatformManagerImpl<ImplClass>::_Shutdown();
+#endif // !CHIP_SYSTEM_CONFIG_USE_LIBEV
 }
 
 // Fully instantiate the generic implementation class in whatever compilation unit includes this file.

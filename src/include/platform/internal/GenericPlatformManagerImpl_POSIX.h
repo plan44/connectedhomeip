@@ -104,12 +104,11 @@ private:
 #if CHIP_SYSTEM_CONFIG_USE_LIBEV
     static void _DispatchEventViaScheduleWork(System::Layer * aLayer, void * appState);
 #else
-
     DeviceSafeQueue mChipEventQueue;
     std::atomic<bool> mShouldRunEventLoop{ true };
     static void * EventLoopTaskMain(void * arg);
-#endif
     void ProcessDeviceEvents();
+#endif
     std::atomic<bool> mShouldRunEventLoop;
 };
 
