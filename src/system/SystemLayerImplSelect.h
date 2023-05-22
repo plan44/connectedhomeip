@@ -91,6 +91,10 @@ public:
     {
         mLibEvLoopP = aLibEvLoopP;
     };
+    virtual struct ev_loop * GetLibEvLoop() override
+    {
+        return mLibEvLoopP;
+    };
     static void HandleLibEvTimer(EV_P_ struct ev_timer * t, int revents);
     static void HandleLibEvIoWatcher(EV_P_ struct ev_io * i, int revents);
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH/LIBEV

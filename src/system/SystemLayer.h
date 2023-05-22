@@ -250,6 +250,7 @@ public:
     virtual dispatch_queue_t GetDispatchQueue()                   = 0;
 #elif CHIP_SYSTEM_CONFIG_USE_LIBEV
     virtual void SetLibEvLoop(struct ev_loop * aLibEvLoopP) = 0;
+    virtual struct ev_loop * GetLibEvLoop() = 0;
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH/LIBEV
 };
 
