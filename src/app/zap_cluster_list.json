@@ -202,7 +202,7 @@
         "WAKE_ON_LAN_CLUSTER": ["wake-on-lan-server"],
         "WIFI_NETWORK_DIAGNOSTICS_CLUSTER": ["wifi-network-diagnostics-server"],
         "WINDOW_COVERING_CLUSTER": ["window-covering-server"],
-        "TEMPERATURE_CONTROL_CLUSTER": ["temperature-control-server"],
+        "ZEOLITE_FILTER_MONITORING_CLUSTER": [],
         "ZLL_COMMISSIONING_CLUSTER": []
     }
 }
