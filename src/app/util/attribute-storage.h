@@ -230,6 +230,18 @@ CHIP_ERROR emberAfSetDeviceTypeList(chip::EndpointId endpoint, chip::Span<const 
 CHIP_ERROR SetTagList(chip::EndpointId endpoint,
                       chip::Span<const chip::app::Clusters::Descriptor::Structs::SemanticTagStruct::Type> tagList);
 
+// setup a dynamic endpoint's EmberAfEndpointType from a list of template clusters.
+//
+// This is a alternative to declaring dynamic endpoint metadata using DECLARE_DYNAMIC_* macros.
+//
+// As clusters to be used in dynamic endpoint setup need to be defined in ZAP anyway
+// (usually on a special endpoint which remains always disabled), the cluster's
+// metadata including all attributes already exists and can be re-used this way,
+// without error prone manual duplicating with DECLARE_DYNAMIC_*
+//
+EmberAfStatus setupDynamicEndpointDeclaration(EmberAfEndpointType & endpointType, chip::EndpointId templateEndpointId,
+                                              const chip::Span<const chip::ClusterId> & templateClusterIds);
+
 // Register a dynamic endpoint. This involves registering descriptors that describe
 // the composition of the endpoint (encapsulated in the 'ep' argument) as well as providing
 // storage for data versions.
@@ -246,10 +258,14 @@ CHIP_ERROR SetTagList(chip::EndpointId endpoint,
 //
 // An optional parent endpoint id should be passed for child endpoints of composed device.
 //
+// An optional dynamicAttributeStorage can be passed to allow automatic attribute storage.
+// This must point to a memory block of ep->endpointSize bytes size.
+//
 EmberAfStatus emberAfSetDynamicEndpoint(uint16_t index, chip::EndpointId id, const EmberAfEndpointType * ep,
                                         const chip::Span<chip::DataVersion> & dataVersionStorage,
                                         chip::Span<const EmberAfDeviceType> deviceTypeList = {},
-                                        chip::EndpointId parentEndpointId                  = chip::kInvalidEndpointId);
+                                        chip::EndpointId parentEndpointId                  = chip::kInvalidEndpointId,
+                                        uint8_t * dynamicAttributeStorage                  = nullptr);
 chip::EndpointId emberAfClearDynamicEndpoint(uint16_t index);
 uint16_t emberAfGetDynamicIndexFromEndpoint(chip::EndpointId id);
 
