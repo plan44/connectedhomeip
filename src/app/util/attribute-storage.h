@@ -225,10 +225,14 @@ CHIP_ERROR emberAfSetDeviceTypeList(chip::EndpointId endpoint, chip::Span<const 
 //
 // An optional parent endpoint id should be passed for child endpoints of composed device.
 //
+// An optional dynamicAttributeStorage can be passed to allow automatic attribute storage.
+// This must point to a memory block of ep->endpointSize bytes size.
+//
 EmberAfStatus emberAfSetDynamicEndpoint(uint16_t index, chip::EndpointId id, const EmberAfEndpointType * ep,
                                         const chip::Span<chip::DataVersion> & dataVersionStorage,
                                         chip::Span<const EmberAfDeviceType> deviceTypeList = {},
-                                        chip::EndpointId parentEndpointId                  = chip::kInvalidEndpointId);
+                                        chip::EndpointId parentEndpointId                  = chip::kInvalidEndpointId,
+                                        uint8_t * dynamicAttributeStorage                  = nullptr);
 chip::EndpointId emberAfClearDynamicEndpoint(uint16_t index);
 uint16_t emberAfGetDynamicIndexFromEndpoint(chip::EndpointId id);
 

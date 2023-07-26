@@ -240,7 +240,8 @@ uint16_t emberAfGetDynamicIndexFromEndpoint(EndpointId id)
 
 EmberAfStatus emberAfSetDynamicEndpoint(uint16_t index, EndpointId id, const EmberAfEndpointType * ep,
                                         const chip::Span<chip::DataVersion> & dataVersionStorage,
-                                        chip::Span<const EmberAfDeviceType> deviceTypeList, EndpointId parentEndpointId)
+                                        chip::Span<const EmberAfDeviceType> deviceTypeList, EndpointId parentEndpointId,
+                                        uint8_t * dynamicAttributeStorage)
 {
     auto realIndex = index + FIXED_ENDPOINT_COUNT;
 
@@ -275,6 +276,7 @@ EmberAfStatus emberAfSetDynamicEndpoint(uint16_t index, EndpointId id, const Emb
     // Start the endpoint off as disabled.
     emAfEndpoints[index].bitmask.Clear(EmberAfEndpointOptions::isEnabled);
     emAfEndpoints[index].parentEndpointId = parentEndpointId;
+    emAfEndpoints[index].dynamicAttributeStorage = dynamicAttributeStorage;
 
     emberAfSetDynamicEndpointCount(MAX_ENDPOINT_COUNT - FIXED_ENDPOINT_COUNT);
 
@@ -288,6 +290,18 @@ EmberAfStatus emberAfSetDynamicEndpoint(uint16_t index, EndpointId id, const Emb
             memset(dataVersionStorage.data(), 0, dataSize);
         }
     }
+
+#if CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT>0
+    if (dynamicAttributeStorage != nullptr && ep->endpointSize > 0)
+    {
+        // Flag the endpoint as enabled here, because otherwise loading attributes cannot work
+        emAfEndpoints[index].bitmask.Set(EmberAfEndpointOptions::isEnabled);
+        // Load attributes from NVstorage or set defaults
+        emAfLoadAttributeDefaults(id, false);
+        // set disabled again, so enabling below will detect a transition
+        emAfEndpoints[index].bitmask.Clear(EmberAfEndpointOptions::isEnabled);
+    }
+#endif
 
     // Now enable the endpoint.
     emberAfEndpointEnableDisable(id, true);
@@ -373,8 +387,8 @@ EmberAfStatus emAfClusterPreAttributeChangedCallback(const app::ConcreteAttribut
     EmberAfStatus status = EMBER_ZCL_STATUS_SUCCESS;
     // Casting and calling a function pointer on the same line results in ignoring the return
     // of the call on gcc-arm-none-eabi-9-2019-q4-major
-    EmberAfClusterPreAttributeChangedCallback f = (EmberAfClusterPreAttributeChangedCallback)(
-        emberAfFindClusterFunction(cluster, CLUSTER_MASK_PRE_ATTRIBUTE_CHANGED_FUNCTION));
+    EmberAfClusterPreAttributeChangedCallback f = (EmberAfClusterPreAttributeChangedCallback) (emberAfFindClusterFunction(
+        cluster, CLUSTER_MASK_PRE_ATTRIBUTE_CHANGED_FUNCTION));
     if (f != nullptr)
     {
         status = f(attributePath, attributeType, size, value);
@@ -571,7 +585,10 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
 {
     assertChipStackLockedByCurrentThread();
 
-    uint16_t attributeOffsetIndex = 0;
+    // offset relative to the storage block, which is:
+    // - for static endpoints: attributeData[] global
+    // - for dynamic endpoints: dynamicAttributeStorage (unless nullPtr, then all attributes must be external)
+    uint16_t attributeStorageOffset = 0;
 
     for (uint16_t ep = 0; ep < emberAfEndpointCount(); ep++)
     {
@@ -579,13 +596,29 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
         bool isDynamicEndpoint = (ep >= emberAfFixedEndpointCount());
 
         if (emAfEndpoints[ep].endpoint == attRecord->endpoint)
-        {
+        { // Got the endpoint
             const EmberAfEndpointType * endpointType = emAfEndpoints[ep].endpointType;
             uint8_t clusterIndex;
             if (!emberAfEndpointIndexIsEnabled(ep))
             {
+                // TODO: I think this is wrong, and should be a break
+                //   It does not harm because usually no other endpointindex will contain
+                //   an endpoint with the same ID, but it would cause catastrophic mess in
+                //   attribute data because attributeOffsetIndex does not get incremented -
+                //   endpoint enabling/disabling is dynamic, so enabled/disabled state
+                //   MUST NOT change the data layout!
                 continue;
             }
+
+            bool hasDynamicAttributeStorage = emAfEndpoints[ep].dynamicAttributeStorage != nullptr;
+            if (hasDynamicAttributeStorage)
+            {
+                // endpoint storage is not in the static global `attributeData`, but offset
+                // from the per-endpoint dynamicAttributeStorage pointer.
+                // Endpoint processing starts here, so reset the offset.
+                attributeStorageOffset = 0;
+            }
+
             for (clusterIndex = 0; clusterIndex < endpointType->clusterCount; clusterIndex++)
             {
                 const EmberAfCluster * cluster = &(endpointType->cluster[clusterIndex]);
@@ -604,9 +637,17 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
                             }
 
                             {
+                                // attribute storage can be
+                                // - singleton: statically allocated in singletonAttributeData global
+                                // - static endpoint: statically allocated in attributeData global
+                                // - dynamic endpoint with dynamic storage: in memory block provided at endpoint instantiation
                                 uint8_t * attributeLocation =
-                                    (am->mask & ATTRIBUTE_MASK_SINGLETON ? singletonAttributeLocation(am)
-                                                                         : attributeData + attributeOffsetIndex);
+                                    (am->mask & ATTRIBUTE_MASK_SINGLETON
+                                         ? singletonAttributeLocation(am)
+                                         : (hasDynamicAttributeStorage ? emAfEndpoints[ep].dynamicAttributeStorage
+                                                                       : attributeData) + attributeStorageOffset);
+                                    ;
+
                                 uint8_t *src, *dst;
                                 if (write)
                                 {
@@ -622,6 +663,7 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
                                 {
                                     if (buffer == nullptr)
                                     {
+                                        // only getting metadata
                                         return EMBER_ZCL_STATUS_SUCCESS;
                                     }
 
@@ -644,7 +686,8 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
                                 }
 
                                 // Internal storage is only supported for fixed endpoints
-                                if (!isDynamicEndpoint)
+                                // and dynamic ones with dynamicAttributeStorage assigned.
+                                if (!isDynamicEndpoint || hasDynamicAttributeStorage)
                                 {
                                     return typeSensitiveMemCopy(attRecord->clusterId, dst, src, am, write, readLength);
                                 }
@@ -657,7 +700,7 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
                             // Increase the index if attribute is not externally stored
                             if (!(am->mask & ATTRIBUTE_MASK_EXTERNAL_STORAGE) && !(am->mask & ATTRIBUTE_MASK_SINGLETON))
                             {
-                                attributeOffsetIndex = static_cast<uint16_t>(attributeOffsetIndex + emberAfAttributeSize(am));
+                                attributeStorageOffset = static_cast<uint16_t>(attributeStorageOffset + emberAfAttributeSize(am));
                             }
                         }
                     }
@@ -667,7 +710,7 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
                 }
 
                 // Not the cluster we are looking for
-                attributeOffsetIndex = static_cast<uint16_t>(attributeOffsetIndex + cluster->clusterSize);
+                attributeStorageOffset = static_cast<uint16_t>(attributeStorageOffset + cluster->clusterSize);
             }
 
             // Cluster is not in the endpoint.
@@ -675,10 +718,10 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
         }
 
         // Not the endpoint we are looking for
-        // Dynamic endpoints are external and don't factor into storage size
+        // Dynamic endpoints are external and don't factor into statically allocated global storage size
         if (!isDynamicEndpoint)
         {
-            attributeOffsetIndex = static_cast<uint16_t>(attributeOffsetIndex + emAfEndpoints[ep].endpointType->endpointSize);
+            attributeStorageOffset = static_cast<uint16_t>(attributeStorageOffset + emAfEndpoints[ep].endpointType->endpointSize);
         }
     }
     return EMBER_ZCL_STATUS_UNSUPPORTED_ENDPOINT; // Sorry, endpoint was not found.
@@ -1183,7 +1226,7 @@ void emAfLoadAttributeDefaults(EndpointId endpoint, bool ignoreStorage, Optional
     uint8_t attrData[ATTRIBUTE_LARGEST];
     auto * attrStorage = ignoreStorage ? nullptr : app::GetAttributePersistenceProvider();
     // Don't check whether we actually have an attrStorage here, because it's OK
-    // to have one if none of our attributes have NVM storage.
+    // to have none if none of our attributes have NVM storage.
 
     for (ep = 0; ep < epCount; ep++)
     {
