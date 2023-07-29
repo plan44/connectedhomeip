@@ -645,6 +645,17 @@ bool emAfMatchAttribute(const EmberAfCluster * cluster, const EmberAfAttributeMe
     return (am->attributeId == attRecord->attributeId);
 }
 
+
+#ifndef DEBUG_ATTR_ACCESS
+#define DEBUG_ATTR_ACCESS 1
+#endif
+
+#if DEBUG_ATTR_ACCESS
+#include <lib/support/BytesToHex.h>
+#endif
+
+
+
 // When reading non-string attributes, this function returns an error when destination
 // buffer isn't large enough to accommodate the attribute type.  For strings, the
 // function will copy at most readLength bytes.  This means the resulting string
@@ -667,6 +678,14 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
     // - for static endpoints: attributeData[] global
     // - for dynamic endpoints: dynamicAttributeStorage (unless nullPtr, then all attributes must be external)
     uint16_t attributeStorageOffset = 0;
+
+    #if DEBUG_ATTR_ACCESS
+    ChipLogDetail(Zcl, "[Attr]: %s - ep %02d cluster 0x%04x attr 0x%04x",
+                  write ? "WRITE" : (metadata && buffer==nullptr ? "META " : "READ "),
+                  attRecord->endpoint,
+                  attRecord->clusterId,
+                  attRecord->attributeId);
+    #endif // DEBUG_ATTR_ACCESS
 
     for (uint16_t ep = 0; ep < emberAfEndpointCount(); ep++)
     {
@@ -710,6 +729,16 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                         const EmberAfAttributeMetadata * am = &(cluster->attributes[attrIndex]);
                         if (emAfMatchAttribute(cluster, am, attRecord))
                         { // Got the attribute
+                            #if DEBUG_ATTR_ACCESS
+                            ChipLogDetail(Zcl, "        FOUND in: %s endpoint, size = %3d, mask = 0x%02x, storageOffset = %5d, dynamic storage: @%p",
+                                          isDynamicEndpoint ? "DYNAMIC" : "static ",
+                                          (int)am->size,
+                                          (int)am->mask,
+                                          (int)attributeStorageOffset,
+                                          emAfEndpoints[ep].dynamicAttributeStorage);
+                            #endif // DEBUG_ATTR_ACCESS
+
+
                             // If passed metadata location is not null, populate
                             if (metadata != nullptr)
                             {
@@ -739,6 +768,9 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                     if (!emberAfAttributeWriteAccessCallback(attRecord->endpoint, attRecord->clusterId,
                                                                              am->attributeId))
                                     {
+                                        #if DEBUG_ATTR_ACCESS
+                                        ChipLogError(Zcl, "        FAILED write: Status::UnsupportedAccess");
+                                        #endif // DEBUG_ATTR_ACCESS
                                         return Status::UnsupportedAccess;
                                     }
                                 }
@@ -755,17 +787,47 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                     if (!emberAfAttributeReadAccessCallback(attRecord->endpoint, attRecord->clusterId,
                                                                             am->attributeId))
                                     {
+                                        #if DEBUG_ATTR_ACCESS
+                                        ChipLogError(Zcl, "        FAILED read: Status::UnsupportedAccess");
+                                        #endif // DEBUG_ATTR_ACCESS
                                         return Status::UnsupportedAccess;
                                     }
                                 }
 
+                                #if DEBUG_ATTR_ACCESS
+                                if (write) {
+                                    const size_t maxhex = 100;
+                                    char hexbuf[maxhex];
+                                    Encoding::BytesToHex(buffer, emberAfAttributeSize(am), hexbuf, maxhex, Encoding::HexFlags::kNullTerminate);
+                                    ChipLogDetail(Zcl, "        Writing data[%d]: %s", emberAfAttributeSize(am), hexbuf);
+                                }
+                                #endif
+
                                 // Is the attribute externally stored?
                                 if (am->mask & ATTRIBUTE_MASK_EXTERNAL_STORAGE)
                                 {
-                                    return (write ? emberAfExternalAttributeWriteCallback(attRecord->endpoint, attRecord->clusterId,
-                                                                                          am, buffer)
-                                                  : emberAfExternalAttributeReadCallback(attRecord->endpoint, attRecord->clusterId,
-                                                                                         am, buffer, emberAfAttributeSize(am)));
+                                    #if DEBUG_ATTR_ACCESS
+                                    ChipLogDetail(Zcl, "        EXTERNAL attribute - invoking callback");
+                                    #endif // DEBUG_ATTR_ACCESS
+                                    Status status = (write ? emberAfExternalAttributeWriteCallback(attRecord->endpoint, attRecord->clusterId,
+                                                                                                   am, buffer)
+                                                           : emberAfExternalAttributeReadCallback(attRecord->endpoint, attRecord->clusterId,
+                                                                                                  am, buffer, emberAfAttributeSize(am)));
+                                    #if DEBUG_ATTR_ACCESS
+                                    if (status!=Status::Success)
+                                    {
+                                        ChipLogError(Zcl, "        ERROR: external access callback returns Status: %d", (int)status);
+                                    }
+                                    else {
+                                        if (!write) {
+                                            const size_t maxhex = 100;
+                                            char hexbuf[maxhex];
+                                            Encoding::BytesToHex(buffer, emberAfAttributeSize(am), hexbuf, maxhex, Encoding::HexFlags::kNullTerminate);
+                                            ChipLogDetail(Zcl, "        Read external data[%d]: %s", emberAfAttributeSize(am), hexbuf);
+                                        }
+                                    }
+                                    #endif // DEBUG_ATTR_ACCESS
+                                    return status;
                                 }
 
                                 // Internal storage is only supported for fixed endpoints
@@ -776,9 +838,27 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
 #endif
                                 )
                                 {
-                                    return typeSensitiveMemCopy(attRecord->clusterId, dst, src, am, write, readLength);
+                                    Status status = typeSensitiveMemCopy(attRecord->clusterId, dst, src, am, write, readLength);
+                                    #if DEBUG_ATTR_ACCESS
+                                    if (status!=Status::Success)
+                                    {
+                                        ChipLogError(Zcl, "        ERROR: internal typeSensitiveMemCopy returns Status: %d", (int)status);
+                                    }
+                                    else {
+                                        if (!write) {
+                                            const size_t maxhex = 100;
+                                            char hexbuf[maxhex];
+                                            Encoding::BytesToHex(buffer, emberAfAttributeSize(am), hexbuf, maxhex, Encoding::HexFlags::kNullTerminate);
+                                            ChipLogDetail(Zcl, "        Read internal data[%d]: %s", emberAfAttributeSize(am), hexbuf);
+                                        }
+                                    }
+                                    #endif // DEBUG_ATTR_ACCESS
+                                    return status;
                                 }
 
+                                #if DEBUG_ATTR_ACCESS
+                                ChipLogError(Zcl, "        ERROR: no storage for non-external attribute: Status::Failure");
+                                #endif // DEBUG_ATTR_ACCESS
                                 return Status::Failure;
                             }
                         }
@@ -793,7 +873,10 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                     }
 
                     // Attribute is not in the cluster.
-                    return Status::UnsupportedAttribute;
+                    #if DEBUG_ATTR_ACCESS
+                    ChipLogError(Zcl, "        ERROR: no attribute 0x%04x in cluster 0x%04x in endpoint %d: Status::UnsupportedAttribute", attRecord->attributeId, attRecord->clusterId, attRecord->endpoint);
+                    #endif // DEBUG_ATTR_ACCESS
+					return Status::UnsupportedAttribute;
                 }
 
                 // Not the cluster we are looking for
@@ -801,6 +884,9 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
             }
 
             // Cluster is not in the endpoint.
+            #if DEBUG_ATTR_ACCESS
+            ChipLogError(Zcl, "        ERROR: no cluster 0x%04x in endpoint %d: Status::UnsupportedCluster", attRecord->clusterId, attRecord->endpoint);
+            #endif // DEBUG_ATTR_ACCESS
             return Status::UnsupportedCluster;
         }
 
@@ -811,6 +897,9 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
             attributeStorageOffset = static_cast<uint16_t>(attributeStorageOffset + emAfEndpoints[ep].endpointType->endpointSize);
         }
     }
+    #if DEBUG_ATTR_ACCESS
+    ChipLogError(Zcl, "        ERROR: no such endpoint: Status::UnsupportedEndpoint");
+    #endif // DEBUG_ATTR_ACCESS
     return Status::UnsupportedEndpoint; // Sorry, endpoint was not found.
 }
 
