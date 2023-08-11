@@ -309,8 +309,10 @@ EmberAfStatus emberAfSetDynamicEndpoint(uint16_t index, EndpointId id, const Emb
     emAfEndpoints[index].dataVersions   = dataVersionStorage.data();
     // Start the endpoint off as disabled.
     emAfEndpoints[index].bitmask.Clear(EmberAfEndpointOptions::isEnabled);
-    emAfEndpoints[index].parentEndpointId = parentEndpointId;
+    emAfEndpoints[index].parentEndpointId        = parentEndpointId;
+#if CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT>0
     emAfEndpoints[index].dynamicAttributeStorage = dynamicAttributeStorage;
+#endif
 
     emberAfSetDynamicEndpointCount(MAX_ENDPOINT_COUNT - FIXED_ENDPOINT_COUNT);
 
@@ -663,6 +665,7 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
                 continue;
             }
 
+#if CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT>0
             bool hasDynamicAttributeStorage = emAfEndpoints[ep].dynamicAttributeStorage != nullptr;
             if (hasDynamicAttributeStorage)
             {
@@ -671,6 +674,7 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
                 // Endpoint processing starts here, so reset the offset.
                 attributeStorageOffset = 0;
             }
+#endif
 
             for (clusterIndex = 0; clusterIndex < endpointType->clusterCount; clusterIndex++)
             {
@@ -689,7 +693,12 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
                                           (int)am->size,
                                           (int)am->mask,
                                           (int)attributeStorageOffset,
-                                          emAfEndpoints[ep].dynamicAttributeStorage);
+                                          #if CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT>0
+                                          emAfEndpoints[ep].dynamicAttributeStorage
+                                          #else
+                                          nullptr
+                                          #endif
+                                          );
                             #endif // DEBUG_ATTR_ACCESS
 
 
@@ -707,10 +716,13 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
                                 uint8_t * attributeLocation =
                                     (am->mask & ATTRIBUTE_MASK_SINGLETON
                                          ? singletonAttributeLocation(am)
+#if CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT>0
                                          : (hasDynamicAttributeStorage ? emAfEndpoints[ep].dynamicAttributeStorage
-                                                                       : attributeData) +
-                                             attributeStorageOffset);
-                                
+                                                                       : attributeData)
+#else
+                                         : attributeData
+#endif
+                                        + attributeStorageOffset);
 
                                 uint8_t *src, *dst;
                                 if (write)
@@ -784,7 +796,11 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
 
                                 // Internal storage is only supported for fixed endpoints
                                 // and dynamic ones with dynamicAttributeStorage assigned.
-                                if (!isDynamicEndpoint || hasDynamicAttributeStorage)
+                                if (!isDynamicEndpoint
+#if CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT>0
+                                    || hasDynamicAttributeStorage
+#endif
+                                )
                                 {
                                     EmberAfStatus status = typeSensitiveMemCopy(attRecord->clusterId, dst, src, am, write, readLength);
                                     #if DEBUG_ATTR_ACCESS
