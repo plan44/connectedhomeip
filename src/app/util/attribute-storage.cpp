@@ -833,7 +833,7 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
 
                     // Attribute is not in the cluster.
                     #if DEBUG_ATTR_ACCESS
-                    ChipLogError(Zcl, "        ERROR: no such attribute in the cluster: EMBER_ZCL_STATUS_UNSUPPORTED_ATTRIBUTE");
+                    ChipLogError(Zcl, "        ERROR: no attribute 0x%04x in the cluster: EMBER_ZCL_STATUS_UNSUPPORTED_ATTRIBUTE", attRecord->attributeId);
                     #endif // DEBUG_ATTR_ACCESS
                     return EMBER_ZCL_STATUS_UNSUPPORTED_ATTRIBUTE;
                 }
@@ -844,7 +844,7 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
 
             // Cluster is not in the endpoint.
             #if DEBUG_ATTR_ACCESS
-            ChipLogError(Zcl, "        ERROR: no such cluster in the endpoint: EMBER_ZCL_STATUS_UNSUPPORTED_CLUSTER");
+            ChipLogError(Zcl, "        ERROR: no cluster 0x%04x in the endpoint: EMBER_ZCL_STATUS_UNSUPPORTED_CLUSTER", attRecord->clusterId);
             #endif // DEBUG_ATTR_ACCESS
             return EMBER_ZCL_STATUS_UNSUPPORTED_CLUSTER;
         }
@@ -857,7 +857,7 @@ EmberAfStatus emAfReadOrWriteAttribute(EmberAfAttributeSearchRecord * attRecord,
         }
     }
     #if DEBUG_ATTR_ACCESS
-    ChipLogError(Zcl, "        ERROR: no such endpoint: EMBER_ZCL_STATUS_UNSUPPORTED_ENDPOINT");
+    ChipLogError(Zcl, "        ERROR: no endpoint %d: EMBER_ZCL_STATUS_UNSUPPORTED_ENDPOINT", attRecord->endpoint);
     #endif // DEBUG_ATTR_ACCESS
     return EMBER_ZCL_STATUS_UNSUPPORTED_ENDPOINT; // Sorry, endpoint was not found.
 }
