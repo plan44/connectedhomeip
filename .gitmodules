@@ -3,6 +3,8 @@
 	url = https://github.com/nestlabs/nlassert.git
 	branch  = master
 [submodule "nlfaultinjection"]
+	update = none
+	ignore = all
 	path = third_party/nlfaultinjection/repo
 	url = https://github.com/nestlabs/nlfaultinjection.git
 	branch  = master
@@ -11,14 +13,20 @@
 	url = https://github.com/nestlabs/nlio.git
 	branch  = master
 [submodule "nlunit-test"]
+	update = none
+	ignore = all
 	path = third_party/nlunit-test/repo
 	url = https://github.com/nestlabs/nlunit-test.git
 	branch  = master
 [submodule "mbedtls"]
+	update = none
+	ignore = all
 	path = third_party/mbedtls/repo
 	url = https://github.com/ARMmbed/mbedtls.git
 	branch = mbedtls-2.28
 [submodule "qrcode"]
+	update = none
+	ignore = all
 	path = examples/common/QRCode/repo
 	url = https://github.com/nayuki/QR-Code-generator.git
 	branch  = master
@@ -40,16 +48,22 @@
 	url = https://github.com/openthread/openthread.git
 	branch  = main
 [submodule "ot-br-posix"]
+	update = none
+	ignore = all
 	path = third_party/ot-br-posix/repo
 	url = https://github.com/openthread/ot-br-posix.git
 	branch  = main
 	platforms = linux
 [submodule "cirque"]
+	update = none
+	ignore = all
 	path = third_party/cirque/repo
 	url = https://github.com/openweave/cirque.git
 	branch  = master
 	platforms = linux
 [submodule "nanopb"]
+	update = none
+	ignore = all
 	path = third_party/nanopb/repo
 	url = https://github.com/nanopb/nanopb.git
 	branch  = master
@@ -248,6 +262,8 @@
 	url = https://github.com/Infineon/recipe-make-cat1a
 	platforms = infineon
 [submodule "third_party/pybind11/repo"]
+	update = none
+	ignore = all
 	path = third_party/pybind11/repo
 	url = https://github.com/pybind/pybind11
 	branch  = stable
@@ -351,9 +367,13 @@
 	branch = 2.7.1-Matter
 	platforms = efr32,silabs_docker
 [submodule "editline"]
+	update = none
+	ignore = all
 	path = third_party/editline/repo
 	url = https://github.com/troglobit/editline.git
 [submodule "third_party/boringssl/repo/src"]
+	update = none
+	ignore = all
 	path = third_party/boringssl/repo/src
 	url = https://github.com/google/boringssl.git
 [submodule "third_party/mt793x_sdk/filogic"]
@@ -392,6 +412,8 @@
 	branch = main
 	platforms = bouffalolab
 [submodule "third_party/libwebsockets/repo"]
+	update = none
+	ignore = all
 	path = third_party/libwebsockets/repo
 	url = https://github.com/warmcat/libwebsockets
 	platforms = linux,darwin,tizen
@@ -437,6 +459,8 @@
 	branch = matter
 	platforms = asr
 [submodule "third_party/silabs/wifi_sdk"]
+	update = none
+	ignore = all
 	path = third_party/silabs/wifi_sdk
 	url = https://github.com/SiliconLabs/wiseconnect
 	branch = master
