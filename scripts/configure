@@ -89,8 +89,8 @@ function main() { # ...
     if [[ -n "$PROJECT" ]]; then
         local subdir="$(cd "${CHIP_ROOT}/${PROJECT}" 2>/dev/null && pwd)"
         [[ -n "$subdir" && -r "${subdir}/.gn" ]] || fail "Invalid project '${PROJECT}'"
-        PROJECT="${subdir#${CHIP_ROOT}/}"
-        [[ "$subdir" == "${CHIP_ROOT}/${PROJECT}" ]] || fail "Unable to determine project path"
+        #PROJECT="${subdir#${CHIP_ROOT}/}"
+        #[[ "$subdir" == "${CHIP_ROOT}/${PROJECT}" ]] || fail "Unable to determine project path"
     fi
 
     check_binary gn GN
