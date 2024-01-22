@@ -460,6 +460,8 @@
 	branch = matter
 	platforms = asr
 [submodule "third_party/st/STM32CubeWB"]
+	update = none
+	ignore = all
 	path = third_party/st/STM32CubeWB
 	url = https://github.com/STMicroelectronics/STM32CubeWB.git
 	branch = v1.17.0
