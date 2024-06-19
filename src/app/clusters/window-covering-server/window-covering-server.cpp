@@ -714,7 +714,7 @@ bool emberAfWindowCoveringClusterDownOrCloseCallback(app::CommandHandler * comma
         }
         else
         {
-            LogErrorOnFailure(delegate->StartNonPAMovement(WindowCoveringType::Lift, true)); // start down-or-close movement
+            LogErrorOnFailure(delegate->StartNonPAMovement(WindowCoveringType::Lift, false)); // start down-or-close movement
         }
 
         if (HasFeature(endpoint, Feature::kPositionAwareTilt))
