@@ -651,11 +651,20 @@ bool emberAfWindowCoveringClusterUpOrOpenCallback(app::CommandHandler * commandO
         {
             LogErrorOnFailure(delegate->HandleMovement(WindowCoveringType::Lift));
         }
+        else
+        {
+            LogErrorOnFailure(delegate->StartNonPAMovement(WindowCoveringType::Lift, true)); // start up-or-open movement
+        }
 
         if (HasFeature(endpoint, Feature::kPositionAwareTilt))
         {
             LogErrorOnFailure(delegate->HandleMovement(WindowCoveringType::Tilt));
         }
+        else
+        {
+            LogErrorOnFailure(delegate->StartNonPAMovement(WindowCoveringType::Tilt, true)); // start up-or-open movement
+        }
+
     }
     else
     {
@@ -702,10 +711,18 @@ bool emberAfWindowCoveringClusterDownOrCloseCallback(app::CommandHandler * comma
         {
             LogErrorOnFailure(delegate->HandleMovement(WindowCoveringType::Lift));
         }
+        else
+        {
+            LogErrorOnFailure(delegate->StartNonPAMovement(WindowCoveringType::Lift, false)); // start down-or-close movement
+        }
 
         if (HasFeature(endpoint, Feature::kPositionAwareTilt))
         {
             LogErrorOnFailure(delegate->HandleMovement(WindowCoveringType::Tilt));
+        }
+        else
+        {
+            LogErrorOnFailure(delegate->StartNonPAMovement(WindowCoveringType::Tilt, false)); // start down-or-close movement
         }
     }
     else
