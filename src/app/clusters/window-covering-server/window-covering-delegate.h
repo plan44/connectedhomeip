@@ -54,6 +54,20 @@ public:
      */
     virtual CHIP_ERROR HandleMovement(WindowCoveringType type) = 0;
 
+
+    /**
+     * @brief
+     *   This method is called for non-position-aware window covering devices, which do not have
+     *   any positional attributes
+     *
+     *   @param[in]  aUpOrOpen      if true, the movement should start in the "up or open" direction, otherwise "down or close"
+     *
+     *   @return CHIP_NO_ERROR On success.
+     *   @return Other Value indicating it failed to adjust window covering position.
+     */
+    virtual CHIP_ERROR StartNonPAMovement(WindowCoveringType type, bool aUpOrOpen) = 0;
+
+
     /**
      * @brief
      *   This method stops any adjusting to the physical tilt and lift/slide that is currently occurring.
