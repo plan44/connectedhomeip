@@ -141,6 +141,10 @@ chip::Protocols::InteractionModel::Status
 emAfClusterPreAttributeChangedCallback(const chip::app::ConcreteAttributePath & attributePath, EmberAfAttributeType attributeType,
                                        uint16_t size, uint8_t * value);
 
+// Check whether there is an endpoint defined with the given endpoint id that is
+// enabled.
+bool emberAfEndpointIsEnabled(chip::EndpointId endpoint);
+
 // Note the difference in for server filtering.
 // This method will return the cluster count for BOTH client and server
 // and those do NOT work with NthCluster/NthClusterId
