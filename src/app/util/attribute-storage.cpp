@@ -738,12 +738,13 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                         if (emAfMatchAttribute(cluster, am, attRecord))
                         { // Got the attribute
                             #if DEBUG_ATTR_ACCESS
-                            ChipLogDetail(Zcl, "        FOUND in: %s endpoint, size = %3d, mask = 0x%02x, storageOffset = %5d, dynamic storage: @%p",
+                            ChipLogDetail(Zcl, "        FOUND in: %s endpoint, size = %3d, mask = 0x%02x, storageOffset = %5d, dynamic storage span: %zu bytes @%p",
                                           isDynamicEndpoint ? "DYNAMIC" : "static ",
                                           (int)am->size,
                                           (int)am->mask,
                                           (int)attributeStorageOffset,
-                                          emAfEndpoints[ep].dynamicAttributeStorage);
+                                          emAfEndpoints[ep].dynamicAttributeStorage.size(),
+                                          emAfEndpoints[ep].dynamicAttributeStorage.data());
                             #endif // DEBUG_ATTR_ACCESS
 
 
@@ -817,9 +818,11 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                 #if DEBUG_ATTR_ACCESS
                                 if (write) {
                                     const size_t maxhex = 100;
+                                    const size_t towrite = emberAfAttributeSize(am);
                                     char hexbuf[maxhex];
-                                    Encoding::BytesToHex(buffer, emberAfAttributeSize(am), hexbuf, maxhex, Encoding::HexFlags::kNullTerminate);
-                                    ChipLogDetail(Zcl, "        Writing data[%d]: %s", emberAfAttributeSize(am), hexbuf);
+                                    const size_t tohex = (maxhex-1)/2;
+                                    Encoding::BytesToHex(buffer, tohex>towrite ? towrite : tohex, hexbuf, maxhex, Encoding::HexFlags::kNullTerminate);
+                                    ChipLogDetail(Zcl, "        Writing data[%zu]: %s%s", towrite, hexbuf, towrite>tohex ? "..." : "");
                                 }
                                 #endif
 
@@ -841,9 +844,11 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                     else {
                                         if (!write) {
                                             const size_t maxhex = 100;
+                                            const size_t toread = emberAfAttributeSize(am);
                                             char hexbuf[maxhex];
-                                            Encoding::BytesToHex(buffer, emberAfAttributeSize(am), hexbuf, maxhex, Encoding::HexFlags::kNullTerminate);
-                                            ChipLogDetail(Zcl, "        Read external data[%d]: %s", emberAfAttributeSize(am), hexbuf);
+                                            const size_t tohex = (maxhex-1)/2;
+                                            Encoding::BytesToHex(buffer, tohex>toread ? toread : tohex, hexbuf, maxhex, Encoding::HexFlags::kNullTerminate);
+                                            ChipLogDetail(Zcl, "        Read external data[%zu]: %s%s", toread, hexbuf, toread>tohex ? "..." : "");
                                         }
                                     }
                                     #endif // DEBUG_ATTR_ACCESS
@@ -863,9 +868,11 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                     else {
                                         if (!write) {
                                             const size_t maxhex = 100;
+                                            const size_t toread = emberAfAttributeSize(am);
                                             char hexbuf[maxhex];
-                                            Encoding::BytesToHex(buffer, emberAfAttributeSize(am), hexbuf, maxhex, Encoding::HexFlags::kNullTerminate);
-                                            ChipLogDetail(Zcl, "        Read internal data[%d]: %s", emberAfAttributeSize(am), hexbuf);
+                                            const size_t tohex = (maxhex-1)/2;
+                                            Encoding::BytesToHex(buffer, tohex>toread ? toread : tohex, hexbuf, maxhex, Encoding::HexFlags::kNullTerminate);
+                                            ChipLogDetail(Zcl, "        Read internal data[%zu]: %s%s", toread, hexbuf, toread>tohex ? "..." : "");
                                         }
                                     }
                                     #endif // DEBUG_ATTR_ACCESS
