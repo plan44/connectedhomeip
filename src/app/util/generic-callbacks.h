@@ -121,6 +121,10 @@ chip::Protocols::InteractionModel::Status emberAfExternalAttributeReadCallback(c
  * write the attribute, it returns a value of InteractionModel::Status::Success. Any
  * other return value indicates the application was not able to write the
  * attribute.
+ *      Implementations must treat buffer==nullptr as if a buffer of the same
+ * size as the attribute, filled with zeroes, was passed. It is NOT correct
+ * to omit writing when buffer==nullptr, caller may rely on zeroing attributes
+ * without providing data.
  */
 chip::Protocols::InteractionModel::Status emberAfExternalAttributeWriteCallback(chip::EndpointId endpoint,
                                                                                 chip::ClusterId clusterId,
