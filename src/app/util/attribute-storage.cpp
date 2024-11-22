@@ -732,13 +732,18 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
             uint8_t clusterIndex;
             if (!emberAfEndpointIndexIsEnabled(ep))
             {
-                // TODO: I think this is wrong, and should be a break
-                //   It does not harm because usually no other endpointindex will contain
-                //   an endpoint with the same ID, but it would cause catastrophic mess in
-                //   attribute data because attributeOffsetIndex does not get incremented -
-                //   endpoint enabling/disabling is dynamic, so enabled/disabled state
-                //   MUST NOT change the data layout!
-                continue;
+                // This used to be a continue, but it must be a break for the following reason:
+                //   If there was another endpoint with the same ID, but enabled at a higher
+                //   index (very unlikely in practice so the bug did not harm so far), continuing to look
+                //   for it would cause catastrophic mess in attribute data because calling
+                //   continue here would skip incrementing attributeStorageOffset properly
+                //   to skip over the disabled cluster's data. So in case another instance
+                //   of the same cluster but enabled would be found, attribute access would
+                //   be performed with wrong offsets -> total disaster.
+                //
+                //   Using a break here will cause attempts to access disabled EPs
+                //   with Status::UnsupportedEndpoint, which is the correct behaviour.
+                break;
             }
 
 #if CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT > 0
