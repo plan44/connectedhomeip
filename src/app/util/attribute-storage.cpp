@@ -853,7 +853,7 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                     char hexbuf[maxhex];
                                     const size_t tohex = (maxhex-1)/2;
                                     Encoding::BytesToHex(buffer, tohex>towrite ? towrite : tohex, hexbuf, maxhex, Encoding::HexFlags::kNullTerminate);
-                                    ChipLogDetail(Zcl, "        Writing data[%zu]: %s%s", towrite, buffer!=nullptr ? hexbuf : "<erase: all zeroes>", towrite>tohex ? "..." : "");
+                                    ChipLogDetail(Zcl, "        Writing data[%zu]: %s%s", towrite, buffer!=nullptr ? hexbuf : "<erase: as many zeroes as needed>", towrite>tohex ? "..." : "");
                                 }
                                 #endif
 
@@ -895,6 +895,18 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                     // Note: typeSensitiveMemCopy with write==true does handle src==nullptr as if passed an array
                                     //       of same size as the attribute, filled with zeroes.
                                     //       This is REQUIRED behaviour, as src is allowed to be nullptr when writing.
+                                    #if DEBUG_ATTR_ACCESS
+                                    if (write) {
+                                        // pad out target
+                                        ChipLogDetail(Zcl, "        Write: pad attr storage area with %d 'W's before actual write", emberAfAttributeSize(am));
+                                        memset(dst, 'W', emberAfAttributeSize(am));
+                                    }
+                                    else {
+                                        // pad out read buffer
+                                        ChipLogDetail(Zcl, "        Read: pad read buffer with %d 'R's before actual read", readLength);
+                                        memset(dst, 'R', emberAfAttributeSize(am));
+                                    }
+                                    #endif
                                     Status status = typeSensitiveMemCopy(attRecord->clusterId, dst, src, am, write, readLength);
                                     #if DEBUG_ATTR_ACCESS
                                     if (status!=Status::Success)
