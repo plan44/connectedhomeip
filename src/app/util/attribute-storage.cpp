@@ -572,7 +572,7 @@ const EmberAfAttributeMetadata * emberAfLocateAttributeMetadata(EndpointId endpo
     record.clusterId   = clusterId;
     record.attributeId = attributeId;
     emAfReadOrWriteAttribute(&record, &metadata,
-                             nullptr, // buffer
+                             nullptr, // buffer==nullptr -> only return metadata
                              0,       // buffer size
                              false);  // write?
     return metadata;
@@ -697,12 +697,16 @@ bool emAfMatchAttribute(const EmberAfCluster * cluster, const EmberAfAttributeMe
 // any truncation.  If readLength is zero, we are working with backwards-
 // compatibility wrapper functions and we just cross our fingers and hope for
 // the best.
+// If buffer==nullptr, the function only returns metadata for the attribute.
 //
 // When writing attributes, readLength is ignored.  For non-string attributes,
 // this function assumes the source buffer is the same size as the attribute
 // type.  For strings, the function will copy as many bytes as will fit in the
 // attribute.  This means the resulting string may be truncated.  The length
 // byte(s) in the resulting string will reflect any truncated.
+// If buffer==nullptr, writing takes place as if the buffer was an array
+// filled with zeroes up to at least the attribute's size.
+
 Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, const EmberAfAttributeMetadata ** metadata,
                                 uint8_t * buffer, uint16_t readLength, bool write)
 {
@@ -809,6 +813,8 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                 uint8_t *src, *dst;
                                 if (write)
                                 {
+                                    // buffer==nullptr in write means: fill attribute with all zeroes
+                                    // Code below must be able to handle that (src==nullptr)
                                     src = buffer;
                                     dst = attributeLocation;
                                     if (!emberAfAttributeWriteAccessCallback(attRecord->endpoint, attRecord->clusterId,
@@ -824,7 +830,7 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                 {
                                     if (buffer == nullptr)
                                     {
-                                        // only getting metadata
+                                        // buffer==nullptr in read means: only get metadata -> we're done here
                                         return Status::Success;
                                     }
 
@@ -847,7 +853,7 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                     char hexbuf[maxhex];
                                     const size_t tohex = (maxhex-1)/2;
                                     Encoding::BytesToHex(buffer, tohex>towrite ? towrite : tohex, hexbuf, maxhex, Encoding::HexFlags::kNullTerminate);
-                                    ChipLogDetail(Zcl, "        Writing data[%zu]: %s%s", towrite, hexbuf, towrite>tohex ? "..." : "");
+                                    ChipLogDetail(Zcl, "        Writing data[%zu]: %s%s", towrite, buffer!=nullptr ? hexbuf : "<erase: all zeroes>", towrite>tohex ? "..." : "");
                                 }
                                 #endif
 
@@ -857,6 +863,8 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                     #if DEBUG_ATTR_ACCESS
                                     ChipLogDetail(Zcl, "        EXTERNAL attribute - invoking callback");
                                     #endif // DEBUG_ATTR_ACCESS
+                                    // Note: emberAfExternalAttributeWriteCallback implementations must handle buffer==nullptr
+                                    //       as if passed an array of same size as the attribute, filled with zeroes.
                                     Status status = (write ? emberAfExternalAttributeWriteCallback(attRecord->endpoint, attRecord->clusterId,
                                                                                                    am, buffer)
                                                            : emberAfExternalAttributeReadCallback(attRecord->endpoint, attRecord->clusterId,
@@ -884,6 +892,9 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                 // and dynamic ones with dynamicAttributeStorage assigned.
                                 if (!isDynamicEndpoint || hasDynamicAttributeStorage)
                                 {
+                                    // Note: typeSensitiveMemCopy with write==true does handle src==nullptr as if passed an array
+                                    //       of same size as the attribute, filled with zeroes.
+                                    //       This is REQUIRED behaviour, as src is allowed to be nullptr when writing.
                                     Status status = typeSensitiveMemCopy(attRecord->clusterId, dst, src, am, write, readLength);
                                     #if DEBUG_ATTR_ACCESS
                                     if (status!=Status::Success)
@@ -1516,9 +1527,9 @@ void emAfLoadAttributeDefaults(EndpointId endpoint, Optional<ClusterId> clusterI
 
                     emAfReadOrWriteAttribute(&record,
                                              nullptr, // metadata - unused
-                                             ptr,
-                                             0,     // buffer size - unused
-                                             true); // write?
+                                             ptr,     // see above, if null, should be treated as endless array of zeroes
+                                             0,       // buffer size - unused for write
+                                             true);   // do write
                 }
             }
         }
