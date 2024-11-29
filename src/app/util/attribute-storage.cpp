@@ -653,7 +653,7 @@ bool emAfMatchAttribute(const EmberAfCluster * cluster, const EmberAfAttributeMe
 
 
 #ifndef DEBUG_ATTR_ACCESS
-#define DEBUG_ATTR_ACCESS 1
+#define DEBUG_ATTR_ACCESS 0
 #endif
 
 #if DEBUG_ATTR_ACCESS
