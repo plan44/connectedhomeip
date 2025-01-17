@@ -25,7 +25,9 @@
 #include <platform/internal/CHIPDeviceLayerInternal.h>
 
 #if !CHIP_DISABLE_PLATFORM_KVS
-#include <platform/Darwin/DeviceInstanceInfoProviderImpl.h>
+#ifndef P44_INTERNAL_XCODE_BUILD
+  #include <platform/Darwin/DeviceInstanceInfoProviderImpl.h>
+#endif
 #include <platform/DeviceInstanceInfoProvider.h>
 #endif
 
@@ -65,7 +67,9 @@ CHIP_ERROR PlatformManagerImpl::_InitChipStack()
 #if !CHIP_DISABLE_PLATFORM_KVS
     // Now set up our device instance info provider.  We couldn't do that
     // earlier, because the generic implementation sets a generic one.
+    #ifndef P44_INTERNAL_XCODE_BUILD
     SetDeviceInstanceInfoProvider(&DeviceInstanceInfoProviderMgrImpl());
+    #endif
 #endif // CHIP_DISABLE_PLATFORM_KVS
 
     mStartTime = System::SystemClock().GetMonotonicTimestamp();

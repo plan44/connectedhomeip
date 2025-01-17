@@ -35,10 +35,12 @@ public:
     {}
 };
 
+#ifndef P44_INTERNAL_XCODE_BUILD
 inline DeviceInstanceInfoProviderImpl & DeviceInstanceInfoProviderMgrImpl()
 {
     static DeviceInstanceInfoProviderImpl sInstance(ConfigurationManagerImpl::GetDefaultInstance());
     return sInstance;
 }
+#endif
 } // namespace DeviceLayer
 } // namespace chip

@@ -18,5 +18,7 @@
 #pragma once
 
 #if CHIP_HAVE_CONFIG_H
+#ifndef P44_INTERNAL_XCODE_BUILD
 #include <app/icd/server/ICDServerBuildConfig.h>
+#endif
 #endif
