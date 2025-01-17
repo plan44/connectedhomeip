@@ -70,8 +70,10 @@ CHIP_ERROR LogCertificationDeclaration(const ByteSpan & cd)
     ReturnErrorOnFailure(Credentials::CMS_ExtractKeyId(cd, kid));
 
     Crypto::P256PublicKey verifyingKey;
-    //Credentials::CsaCdKeysTrustStore cdKeysTrustStore;
-    //ReturnErrorOnFailure(cdKeysTrustStore.LookupVerifyingKey(kid, verifyingKey));
+    #ifndef P44_INTERNAL_XCODE_BUILD
+    Credentials::CsaCdKeysTrustStore cdKeysTrustStore;
+    ReturnErrorOnFailure(cdKeysTrustStore.LookupVerifyingKey(kid, verifyingKey));
+    #endif
 
     ByteSpan cdContentOut;
     ReturnErrorOnFailure(Credentials::CMS_Verify(cd, verifyingKey, cdContentOut));
