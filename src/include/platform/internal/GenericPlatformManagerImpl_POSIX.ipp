@@ -158,7 +158,9 @@ CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_PostEvent(const ChipDev
     //   multiple threads by running matter and all application code in the same thread on the
     //   libev mainloop. So getting called from another thread here is very likely a
     //   application design error.
+#if CHIP_STACK_LOCK_TRACKING_ENABLED
     VerifyOrDieWithMsg(_IsChipStackLockedByCurrentThread(), DeviceLayer, "PostEvent() not allowed from outside chip stack lock");
+#endif
 
     // Schedule dispatching this event via System Layer's ScheduleWork
     ChipDeviceEvent * eventCopyP = new ChipDeviceEvent;
