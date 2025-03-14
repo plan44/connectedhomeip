@@ -79,10 +79,6 @@ static uint8_t emberAfClusterCountForEndpointType(const EmberAfEndpointType * en
 // otherwise number of client clusters on the endpoint at the given index.
 static uint8_t emberAfClusterCountByIndex(uint16_t endpointIndex, bool server);
 
-// Check whether there is an endpoint defined with the given endpoint id that is
-// enabled.
-static bool emberAfEndpointIsEnabled(EndpointId endpoint);
-
 namespace {
 
 #if (!defined(ATTRIBUTE_SINGLETONS_SIZE)) || (ATTRIBUTE_SINGLETONS_SIZE == 0)

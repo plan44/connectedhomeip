@@ -132,6 +132,12 @@ uint16_t emberAfIndexFromEndpoint(chip::EndpointId endpoint);
 chip::EndpointId emberAfParentEndpointFromIndex(uint16_t index);
 
 /**
+ * @brief Check whether there is an endpoint defined with the given endpoint id that is enabled.
+ */
+bool emberAfEndpointIsEnabled(chip::EndpointId endpoint);
+
+
+/**
  *  @brief Returns the index of the given endpoint in the list of all endpoints that might support the given cluster server.
  *
  * Returns kEmberInvalidEndpointIndex if the given endpoint does not support the
