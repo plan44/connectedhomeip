@@ -86,6 +86,28 @@ static constexpr uint16_t kEmberInvalidEndpointIndex = 0xFFFF;
 const EmberAfAttributeMetadata * emberAfLocateAttributeMetadata(chip::EndpointId endpoint, chip::ClusterId clusterId,
                                                                 chip::AttributeId attributeId);
 
+
+/**
+ * @brief access attribute based on search record and metadata
+ *
+ * When reading non-string attributes, this function returns an error when destination
+ * buffer isn't large enough to accommodate the attribute type.  For strings, the
+ * function will copy at most readLength bytes.  This means the resulting string
+ * may be truncated.  The length byte(s) in the resulting string will reflect
+ * any truncation.  If readLength is zero, we are working with backwards-
+ * compatibility wrapper functions and we just cross our fingers and hope for
+ * the best.
+ *
+ * When writing attributes, readLength is ignored.  For non-string attributes,
+ * this function assumes the source buffer is the same size as the attribute
+ * type.  For strings, the function will copy as many bytes as will fit in the
+ * attribute.  This means the resulting string may be truncated.  The length
+ * byte(s) in the resulting string will reflect any truncated.
+ */
+chip::Protocols::InteractionModel::Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord,
+                                                                   const EmberAfAttributeMetadata ** metadata, uint8_t * buffer,
+                                                                   uint16_t readLength, bool write);
+
 /**
  * @brief Returns true if endpoint contains the ZCL server with specified id.
  *
