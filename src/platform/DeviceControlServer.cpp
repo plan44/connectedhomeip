@@ -36,11 +36,9 @@ DeviceControlServer & DeviceControlServer::DeviceControlSvr()
 
 CHIP_ERROR DeviceControlServer::PostCommissioningCompleteEvent(NodeId peerNodeId, FabricIndex accessingFabricIndex)
 {
-    ChipDeviceEvent event{
-
-        .Type                  = DeviceEventType::kCommissioningComplete,
-        .CommissioningComplete = { .nodeId = peerNodeId, .fabricIndex = accessingFabricIndex }
-    };
+    ChipDeviceEvent event = {};
+    event.Type = DeviceEventType::kCommissioningComplete;
+    event.CommissioningComplete = { .nodeId = peerNodeId, .fabricIndex = accessingFabricIndex };
 
     return PlatformMgr().PostEvent(&event);
 }
@@ -66,9 +64,10 @@ exit:
 
 CHIP_ERROR DeviceControlServer::PostConnectedToOperationalNetworkEvent(ByteSpan networkID)
 {
-    ChipDeviceEvent event{ .Type = DeviceEventType::kOperationalNetworkEnabled,
-                           // TODO(cecille): This should be some way to specify thread or wifi.
-                           .OperationalNetwork = { .network = 0 } };
+    ChipDeviceEvent event = {};
+    event.Type = DeviceEventType::kOperationalNetworkEnabled;
+    // TODO(cecille): This should be some way to specify thread or wifi.
+    event.OperationalNetwork = { .network = 0 };
     return PlatformMgr().PostEvent(&event);
 }
 
