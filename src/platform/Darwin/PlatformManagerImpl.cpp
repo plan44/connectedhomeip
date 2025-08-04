@@ -60,7 +60,11 @@ PlatformManagerImpl::PlatformManagerImpl() :
 {
     // Tag our queue for IsWorkQueueCurrentQueue()
     dispatch_queue_set_specific(mWorkQueue, this, this, nullptr);
+    #if !CHIP_SYSTEM_CONFIG_USE_LIBEV
+    // in libev setups, the work queue is used only by things like DNS-SD, and must NOT start suspended,
+    // because there is no event loop task and thus no _StartEventLoopTask() to resume it at a later point
     dispatch_suspend(mWorkQueue);
+    #endif
 }
 
 CHIP_ERROR PlatformManagerImpl::_InitChipStack()
