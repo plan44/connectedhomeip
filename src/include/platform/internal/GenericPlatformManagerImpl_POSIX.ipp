@@ -393,12 +393,12 @@ void GenericPlatformManagerImpl_POSIX<ImplClass>::_Shutdown()
     // to use after free errors - here we are destroying mutex and condition variable that
     // are still in use by the event loop!
     //
+#if !CHIP_SYSTEM_CONFIG_USE_LIBEV
     VerifyOrDie(mState.load(std::memory_order_relaxed) == State::kStopped);
 
-#if !CHIP_SYSTEM_CONFIG_USE_LIBEV
     pthread_mutex_destroy(&mStateLock);
     pthread_cond_destroy(&mEventQueueStoppedCond);
-#endif
+#endif // !CHIP_SYSTEM_CONFIG_USE_LIBEV
 
     //
     // Call up to the base class _Shutdown() to perform the actual stack de-initialization
