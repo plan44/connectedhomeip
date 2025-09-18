@@ -102,6 +102,8 @@
 	branch  = matter_sve
 	platforms = silabs,silabs_docker
 [submodule "ot-stm32"]
+	update = none
+	ignore = all
 	path = third_party/openthread/ot-stm32
 	url = https://github.com/openthread/openthread
 	branch = eb6377f
@@ -282,6 +284,8 @@
 	url = https://github.com/Infineon/serial-flash
 	platforms = infineon
 [submodule "infineon/matter-wpan-sdk"]
+	update = none
+	ignore = all
 	path = third_party/infineon/repos/matter-wpan-sdk
 	url = https://github.com/Infineon/matter-wpan-sdk.git
 	branch = main
