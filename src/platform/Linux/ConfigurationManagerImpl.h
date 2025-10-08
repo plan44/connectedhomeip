@@ -26,7 +26,11 @@
 #include "platform/internal/DeviceNetworkInfo.h"
 #include <platform/internal/GenericConfigurationManagerImpl.h>
 
-#include <platform/Linux/PosixConfig.h>
+#if CHIP_CUSTOM_POSIX_CONFIG
+  #include <PosixConfig.h>
+#else
+  #include <platform/Linux/PosixConfig.h>
+#endif
 
 namespace chip {
 namespace DeviceLayer {

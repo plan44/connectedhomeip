@@ -26,6 +26,9 @@ declare_args() {
 
   # Include wifi-paf to commission the device or not
   chip_device_config_enable_wifipaf = false
+
+  # use custom posix config implementation (rather than Darwin's or Linux's default)
+  chip_custom_posix_config = false
 }
 
 if (chip_device_platform == "auto") {

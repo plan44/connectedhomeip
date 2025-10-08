@@ -29,8 +29,8 @@
 #ifndef P44_INTERNAL_XCODE_BUILD
   #include <platform/Darwin/DeviceInstanceInfoProviderImpl.h>
 #endif
-#include <platform/DeviceInstanceInfoProvider.h>
-#endif
+  #include <platform/DeviceInstanceInfoProvider.h>
+#endif // !CHIP_DISABLE_PLATFORM_KVS
 
 #include <platform/Darwin/DiagnosticDataProviderImpl.h>
 #include <platform/Darwin/PlatformMetricKeys.h>
@@ -38,9 +38,9 @@
 
 // Include the non-inline definitions for the GenericPlatformManagerImpl<> template,
 #if CHIP_SYSTEM_CONFIG_USE_DISPATCH
-#include <platform/internal/GenericPlatformManagerImpl.ipp>
+  #include <platform/internal/GenericPlatformManagerImpl.ipp>
 #else
-#include <platform/internal/GenericPlatformManagerImpl_POSIX.ipp>
+  #include <platform/internal/GenericPlatformManagerImpl_POSIX.ipp>
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH
 
 #include <CoreFoundation/CoreFoundation.h>

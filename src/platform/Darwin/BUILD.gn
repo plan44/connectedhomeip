@@ -71,13 +71,18 @@ static_library("Darwin") {
     "PlatformManagerImpl.cpp",
     "PlatformManagerImpl.h",
     "PlatformMetricKeys.h",
-    "PosixConfig.cpp",
-    "PosixConfig.h",
     "SystemPlatformConfig.h",
     "SystemTimeSupport.cpp",
     "UserDefaults.h",
     "UserDefaults.mm",
   ]
+
+  if (!chip_custom_posix_config) {
+    sources += [
+      "PosixConfig.cpp",
+      "PosixConfig.h",
+    ]
+  }
 
   if (chip_enable_wifi) {
     sources += [

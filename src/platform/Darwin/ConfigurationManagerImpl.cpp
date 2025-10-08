@@ -29,7 +29,11 @@
 #include <platform/CHIPDeviceConfig.h>
 #include <platform/ConfigurationManager.h>
 #include <platform/Darwin/DiagnosticDataProviderImpl.h>
-#include <platform/Darwin/PosixConfig.h>
+#if CHIP_CUSTOM_POSIX_CONFIG
+  #include <PosixConfig.h>
+#else
+  #include <platform/Darwin/PosixConfig.h>
+#endif
 #include <platform/internal/CHIPDeviceLayerInternal.h>
 #include <platform/internal/GenericConfigurationManagerImpl.ipp>
 

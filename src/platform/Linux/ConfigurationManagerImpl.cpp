@@ -32,7 +32,11 @@
 #include <platform/CHIPDeviceConfig.h>
 #include <platform/ConfigurationManager.h>
 #include <platform/DiagnosticDataProvider.h>
-#include <platform/Linux/PosixConfig.h>
+#if CHIP_CUSTOM_POSIX_CONFIG
+  #include <PosixConfig.h>
+#else
+  #include <platform/Linux/PosixConfig.h>
+#endif
 #include <platform/internal/GenericConfigurationManagerImpl.ipp>
 
 #include <algorithm>

@@ -18,7 +18,11 @@
 
 #include "DeviceInstanceInfoProviderImpl.h"
 
-#include <platform/Darwin/PosixConfig.h>
+#if CHIP_CUSTOM_POSIX_CONFIG
+  #include <PosixConfig.h>
+#else
+  #include <platform/Darwin/PosixConfig.h>
+#endif
 
 namespace chip {
 namespace DeviceLayer {

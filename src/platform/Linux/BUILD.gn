@@ -45,10 +45,6 @@ static_library("Linux") {
     "../SingletonConfigurationManager.cpp",
     "CHIPDevicePlatformConfig.h",
     "CHIPDevicePlatformEvent.h",
-    "CHIPLinuxStorage.cpp",
-    "CHIPLinuxStorage.h",
-    "CHIPLinuxStorageIni.cpp",
-    "CHIPLinuxStorageIni.h",
     "CHIPPlatformConfig.h",
     "ConfigurationManagerImpl.cpp",
     "ConfigurationManagerImpl.h",
@@ -67,11 +63,21 @@ static_library("Linux") {
     "NetworkCommissioningEthernetDriver.cpp",
     "PlatformManagerImpl.cpp",
     "PlatformManagerImpl.h",
-    "PosixConfig.cpp",
-    "PosixConfig.h",
     "SystemPlatformConfig.h",
     "SystemTimeSupport.cpp",
   ]
+
+  if (!chip_custom_posix_config) {
+    sources += [
+      "PosixConfig.cpp",
+      "PosixConfig.h",
+      "CHIPLinuxStorage.cpp",
+      "CHIPLinuxStorage.h",
+      "CHIPLinuxStorageIni.cpp",
+      "CHIPLinuxStorageIni.h",
+    ]
+  }
+
 
   deps = [
     "${chip_root}/src/app/icd/server:icd-server-config",
