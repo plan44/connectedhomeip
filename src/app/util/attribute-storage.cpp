@@ -736,17 +736,20 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                                     attributeLocation = singletonAttributeLocation(am);
                                 }
 #if CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT > 0
-                                else if (hasDynamicAttributeStorage)
-                                {
-                                    attributeLocation = emAfEndpoints[ep].dynamicAttributeStorage.data();
-                                }
-#endif
                                 else
                                 {
-                                    attributeLocation = attributeData;
+                                    if (hasDynamicAttributeStorage)
+                                    {
+                                        attributeLocation = emAfEndpoints[ep].dynamicAttributeStorage.data();
+                                    }
+#endif // CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT > 0
+                                    else
+                                    {
+                                        attributeLocation = attributeData;
+                                    }
+                                    // Apply the offset to the attribute
+                                    attributeLocation += attributeStorageOffset;
                                 }
-                                // Apply the offset to the attribute
-                                attributeLocation += attributeStorageOffset;
 
                                 uint8_t *src, *dst;
                                 if (write)
