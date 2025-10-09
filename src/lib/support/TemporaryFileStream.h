@@ -91,7 +91,13 @@ public:
     /// Synchronize the file's contents with the underlying storage device.
     ///
     /// In case of failure, the error can be retrieved using errno.
-    bool DataSync() { return fdatasync(mFd.Get()) == 0; }
+    bool DataSync() {
+      #ifdef __APPLE__
+      return fsync(mFd.Get()) == 0;
+      #else
+      return fdatasync(mFd.Get()) == 0;
+      #endif
+    }
 
     /// Get the name of created temporary file.
     const std::string & GetFileName() const { return mFileName; }
