@@ -57,8 +57,6 @@ static_library("Linux") {
     "DiagnosticDataProviderImpl.cpp",
     "DiagnosticDataProviderImpl.h",
     "InetPlatformConfig.h",
-    "KeyValueStoreManagerImpl.cpp",
-    "KeyValueStoreManagerImpl.h",
     "NetworkCommissioningDriver.h",
     "NetworkCommissioningEthernetDriver.cpp",
     "PlatformManagerImpl.cpp",
@@ -75,6 +73,13 @@ static_library("Linux") {
       "CHIPLinuxStorage.h",
       "CHIPLinuxStorageIni.cpp",
       "CHIPLinuxStorageIni.h",
+    ]
+  }
+
+  if (!chip_custom_key_value_storage) {
+    sources += [
+      "KeyValueStoreManagerImpl.cpp",
+      "KeyValueStoreManagerImpl.h",
     ]
   }
 

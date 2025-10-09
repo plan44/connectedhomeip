@@ -97,9 +97,13 @@ static_library("Darwin") {
     sources += [
       "DeviceInstanceInfoProviderImpl.cpp",
       "DeviceInstanceInfoProviderImpl.h",
-      "KeyValueStoreManagerImpl.h",
-      "KeyValueStoreManagerImpl.mm",
     ]
+    if (!chip_custom_key_value_storage) {
+      sources += [
+        "KeyValueStoreManagerImpl.h",
+        "KeyValueStoreManagerImpl.mm",
+      ]
+    }
   }
 
   deps = [

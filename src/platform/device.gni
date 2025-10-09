@@ -29,6 +29,9 @@ declare_args() {
 
   # use custom posix config implementation (rather than Darwin's or Linux's default)
   chip_custom_posix_config = false
+
+  # use custom kvs storage implementation (rather than Darwin's or Linux's default)
+  chip_custom_key_value_storage = false
 }
 
 if (chip_device_platform == "auto") {
