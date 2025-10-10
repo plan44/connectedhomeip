@@ -35,6 +35,12 @@ DeviceInstanceInfoProvider * GetDeviceInstanceInfoProvider()
 
 void SetDeviceInstanceInfoProvider(DeviceInstanceInfoProvider * provider)
 {
+    if (gDeviceInstanceInfoProvider != nullptr)
+    {
+        ChipLogError(DeviceLayer, "Attempt to re-initialize gDeviceInstanceInfoProvider!");
+        return;
+    }
+
     if (provider == nullptr)
     {
         return;
