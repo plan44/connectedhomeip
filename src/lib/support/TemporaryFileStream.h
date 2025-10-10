@@ -47,7 +47,7 @@ protected:
     {
         if (c != EOF)
         {
-            char z = c;
+            char z = (char)c;
             if (write(mFd, &z, 1) != 1)
             {
                 return EOF;
