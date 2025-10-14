@@ -240,9 +240,14 @@ CHIP_ERROR PlatformManagerImpl::_InitChipStack()
     // to finish the initialization process.
     ReturnErrorOnFailure(Internal::GenericPlatformManagerImpl_POSIX<PlatformManagerImpl>::_InitChipStack());
 
+#if CHIP_USE_TRANSITIONAL_DEVICE_INSTANCE_INFO_PROVIDER
     // Now set up our device instance info provider.  We couldn't do that
     // earlier, because the generic implementation sets a generic one.
     SetDeviceInstanceInfoProvider(&DeviceInstanceInfoProviderMgrImpl());
+#else
+    // just check it is set at this time
+    VerifyOrDie(GetDeviceInstanceInfoProvider());
+#endif
 
     mStartTime = System::SystemClock().GetMonotonicTimestamp();
 

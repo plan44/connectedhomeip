@@ -35,10 +35,14 @@ public:
     {}
 };
 
+
+#if CHIP_USE_TRANSITIONAL_DEVICE_INSTANCE_INFO_PROVIDER
 inline DeviceInstanceInfoProviderImpl & DeviceInstanceInfoProviderMgrImpl()
 {
     static DeviceInstanceInfoProviderImpl sInstance(ConfigurationManagerImpl::GetDefaultInstance());
     return sInstance;
 }
+#endif
+
 } // namespace DeviceLayer
 } // namespace chip
