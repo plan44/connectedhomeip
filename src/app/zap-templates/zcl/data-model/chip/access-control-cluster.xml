@@ -119,6 +119,9 @@ limitations under the License.
       <description>Extension</description>
       <access op="read" privilege="administer"/>
       <access op="write" privilege="administer"/>
+      <mandatoryConform>
+        <feature name="EXTS"/>
+      </mandatoryConform>
     </attribute>
 
     <attribute side="server" code="0x0002" define="SUBJECTS_PER_ACCESS_CONTROL_ENTRY" type="int16u" min="4" default="4">SubjectsPerAccessControlEntry</attribute>
