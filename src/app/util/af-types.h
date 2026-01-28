@@ -50,6 +50,15 @@
  */
 typedef uint8_t EmberAfClusterMask;
 
+struct EmberAfFeatureExclusions
+{
+  chip::AttributeId *excludedAttributes = nullptr;
+  chip::EventId *excludedEvents = nullptr;
+  chip::CommandId *excludedAcceptedCommands = nullptr;
+  chip::CommandId *excludedGeneratedCommands = nullptr;
+};
+
+
 /**
  * @brief Type for specifiying cluster including mask, to differentiate server & client
  */
@@ -57,6 +66,7 @@ typedef struct
 {
     chip::ClusterId clusterId;
     EmberAfClusterMask mask;
+    EmberAfFeatureExclusions *exclusions = nullptr;
 } EmberAfClusterSpec;
 
 /**

@@ -273,6 +273,99 @@ const EmberAfCluster * getClusterTypeDefinition(EndpointId endpointId, ClusterId
 
 } // anonymous namespace
 
+
+namespace tagged_alloc {
+
+    static constexpr std::uint32_t kMagic = 0x504C4E34;
+
+    struct alignas(std::max_align_t) Header {
+        std::uint32_t magic;
+        std::uint32_t reserved;   // keeps header size multiple-of-8 on common ABIs
+    };
+
+    inline void* alloc(std::size_t n) noexcept {
+        // allocate header + payload
+        void* raw = std::malloc(sizeof(Header) + n);
+        if (!raw) return nullptr;
+        auto* h = static_cast<Header*>(raw);
+        h->magic = kMagic;
+        h->reserved = 0;
+        return static_cast<void*>(h + 1);
+    }
+
+    inline bool is_marked(const void* p) {
+        if (!p) return false;
+        auto* h = static_cast<const Header*>(p) - 1;
+        return h->magic == kMagic;
+    }
+
+    inline void free(void* p) noexcept {
+        if (!p) return;
+        auto* h = static_cast<Header*>(p) - 1;
+        VerifyOrDie(h->magic == kMagic);
+        std::free(static_cast<void*>(h));
+    }
+
+    inline void free_if_marked(const void* p) noexcept {
+        if (is_marked(p)) {
+            free((void *)p);
+        }
+    }
+
+} // namespace tagged_alloc
+
+
+template <typename IdType> void filterIdList(const EmberAfCluster& aCluster, const IdType* aOriginalListP, const IdType*& aNewList, const IdType* aExclusionListP, uint16_t* aIdCountP = nullptr) {
+    VerifyOrDie(aOriginalListP && aNewList);
+    uint16_t numIds = 0;
+    if (aIdCountP) {
+        // there is a count
+        numIds = *aIdCountP;
+    }
+    else {
+        // list has no count, only a terminator
+        while (aOriginalListP && aOriginalListP[numIds]!=chip::kInvalidCommandId) numIds++;
+    }
+    if (numIds>0) {
+        // Note: we allocate memory for all items, for coding simplicity
+        void* mem = tagged_alloc::alloc(sizeof(IdType)*numIds+1); // space for all IDs plus terminator
+        auto newIds = static_cast<IdType*>(mem);
+        VerifyOrDie(newIds);
+        uint16_t newIdCount = 0;
+        for (int j=0; j<numIds; j++) {
+            bool excluded = false;
+            for (auto exP = aExclusionListP; *exP!=chip::kInvalidCommandId; exP++) {
+                if (*exP==aOriginalListP[j]) {
+                    excluded = true;
+                    break;
+                }
+            }
+            if (!excluded) {
+                newIds[newIdCount++] = aOriginalListP[j];
+            }
+        }
+        if (newIdCount<numIds) {
+            // actually filtered something
+            if (aIdCountP) {
+                // adjust the count
+                *aIdCountP = newIdCount;
+            }
+            else {
+                // terminate the new list
+                newIds[newIdCount] = chip::kInvalidCommandId; // all kInvalidXXX are type compatible and same value
+            }
+            // now replace the attribute list with the filtered version
+            aNewList = newIds;
+        }
+        else {
+            // actually nothing filtered out, just use the list as-is, save memory
+            tagged_alloc::free(mem);
+        }
+    }
+}
+
+
+
 CHIP_ERROR emberAfSetupDynamicEndpointDeclaration(EmberAfEndpointType & endpointType, EndpointId templateEndpointId,
                                                   const Span<const EmberAfClusterSpec> & templateClusterSpecs)
 {
@@ -300,10 +393,50 @@ CHIP_ERROR emberAfSetupDynamicEndpointDeclaration(EmberAfEndpointType & endpoint
                          (unsigned int) templateEndpointId);
             return CHIP_ERROR_NOT_FOUND;
         }
-        // for now, we need to copy the cluster definition, unfortunately.
-        // TODO: make endpointType use a pointer to a list of EmberAfCluster* instead, so we can re-use cluster definitions
-        //   instead of duplicating them here once for every instance.
+        // we need to copy the cluster definition (as we might need to modify the attribute and list)
         newClusters[i] = *cluster;
+        // maybe we need to create filtered versions of attribute lists
+        if (templateClusterSpecs[i].exclusions) {
+            // we have filters for this cluster
+            if (templateClusterSpecs[i].exclusions->excludedAttributes) {
+                // Note: we allocate memory for all items, for coding simplicity
+                void* mem = tagged_alloc::alloc(sizeof(EmberAfAttributeMetadata)*cluster->attributeCount); // space for all attributes
+                auto newAttributes = static_cast<EmberAfAttributeMetadata*>(mem);
+                VerifyOrReturnError(newClusters != nullptr, CHIP_ERROR_NO_MEMORY);
+                uint16_t newAttributeCount = 0;
+                for (int j=0; j<cluster->attributeCount; j++) {
+                    bool excluded = false;
+                    for (auto exP = templateClusterSpecs[i].exclusions->excludedAttributes; *exP!=chip::kInvalidCommandId; exP++) {
+                        if (*exP==cluster->attributes[j].attributeId) {
+                            excluded = true;
+                            break;
+                        }
+                    }
+                    if (!excluded) {
+                        newAttributes[newAttributeCount++] = cluster->attributes[j];
+                    }
+                }
+                if (newAttributeCount<cluster->attributeCount) {
+                    // actually filtered something, so there IS room after the last element
+                    // -> replace the attribute list with the filtered version
+                    newClusters[i].attributeCount = newAttributeCount;
+                    newClusters[i].attributes = newAttributes;
+                }
+                else {
+                    // actually nothing filtered out, just use the list as-is, save memory
+                    tagged_alloc::free(mem);
+                }
+            }
+            if (templateClusterSpecs[i].exclusions->excludedEvents) {
+                filterIdList<chip::EventId>(*cluster, cluster->eventList, newClusters[i].eventList, templateClusterSpecs[i].exclusions->excludedEvents, &newClusters[i].eventCount);
+            }
+            if (templateClusterSpecs[i].exclusions->excludedGeneratedCommands) {
+                filterIdList<chip::EventId>(*cluster, cluster->generatedCommandList, newClusters[i].generatedCommandList, templateClusterSpecs[i].exclusions->excludedGeneratedCommands);
+            }
+            if (templateClusterSpecs[i].exclusions->excludedAcceptedCommands) {
+                filterIdList<chip::CommandId>(*cluster, cluster->acceptedCommandList, newClusters[i].acceptedCommandList, templateClusterSpecs[i].exclusions->excludedAcceptedCommands);
+            }
+        }
         // sum up the needed storage, result must fit into endpointSize member (which is smaller than size_t)
         endpointSize += cluster->clusterSize;
         if (!CanCastTo<decltype(endpointType.endpointSize)>(endpointSize))
@@ -323,6 +456,13 @@ void emberAfResetDynamicEndpointDeclaration(EmberAfEndpointType & endpointType)
 {
     if (endpointType.cluster)
     {
+        // delete dynamically allocated attribute, command or event lists (occur when dynamic exclusions need to take place)
+        for (int i=0; i<endpointType.clusterCount; i++) {
+            tagged_alloc::free_if_marked(endpointType.cluster[i].attributes);
+            tagged_alloc::free_if_marked(endpointType.cluster[i].acceptedCommandList);
+            tagged_alloc::free_if_marked(endpointType.cluster[i].generatedCommandList);
+            tagged_alloc::free_if_marked(endpointType.cluster[i].eventList);
+        }
         delete[] endpointType.cluster;
         endpointType.cluster = nullptr;
     }
@@ -910,7 +1050,7 @@ Status emAfReadOrWriteAttribute(const EmberAfAttributeSearchRecord * attRecord, 
                     #if DEBUG_ATTR_ACCESS
                     ChipLogError(Zcl, "        ERROR: no attribute 0x%04x in cluster 0x%04x in endpoint %d: Status::UnsupportedAttribute", attRecord->attributeId, attRecord->clusterId, attRecord->endpoint);
                     #endif // DEBUG_ATTR_ACCESS
-					return Status::UnsupportedAttribute;
+                    return Status::UnsupportedAttribute;
                 }
 
                 // Not the cluster we are looking for
