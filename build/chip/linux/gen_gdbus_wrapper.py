@@ -64,12 +64,13 @@ def main(argv):
         gdbus_args = ["gdbus-codegen", "--body", "--output", options.output_c
                       ] + extra_args + [options.input_file]
         subprocess.check_call(gdbus_args)
-        sed_args = ["sed", "-i",
-                    r"s/config\.h/BuildConfig.h/g", options.output_c]
-        if sys.platform == "darwin":
-            sed_args = ["sed", "-i", "",
-                        r"s/config\.h/BuildConfig.h/g", options.output_c]
-        subprocess.check_call(sed_args)
+
+        with open(options.output_c, "r+", encoding="utf-8") as output:
+            contents = output.read()
+            contents = contents.replace("config.h", "BuildConfig.h")
+            output.seek(0)
+            output.write(contents)
+            output.truncate()
 
     if options.output_h:
         gdbus_args = [
