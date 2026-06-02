@@ -39,6 +39,8 @@
 
 #if CHIP_SYSTEM_CONFIG_USE_LIBEV
 #include <ev.h>
+#include <deque>
+#include <mutex>
 #if CHIP_SYSTEM_CONFIG_USE_DISPATCH
 #error "CHIP_SYSTEM_CONFIG_USE_LIBEV and CHIP_SYSTEM_CONFIG_USE_DISPATCH are mutually exclusive"
 #endif
@@ -97,8 +99,9 @@ public:
     dispatch_queue_t GetDispatchQueue() override { return mDispatchQueue; };
     void HandleTimerComplete(TimerList::Node * timer);
 #elif CHIP_SYSTEM_CONFIG_USE_LIBEV
-    virtual void SetLibEvLoop(struct ev_loop * aLibEvLoopP) override { mLibEvLoopP = aLibEvLoopP; };
+    virtual void SetLibEvLoop(struct ev_loop * aLibEvLoopP) override;
     virtual struct ev_loop * GetLibEvLoop() override { return mLibEvLoopP; };
+    static void HandleLibEvAsync(EV_P_ struct ev_async * a, int revents);
     static void HandleLibEvTimer(EV_P_ struct ev_timer * t, int revents);
     static void HandleLibEvIoWatcher(EV_P_ struct ev_io * i, int revents);
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH/LIBEV
@@ -169,7 +172,16 @@ protected:
 #if CHIP_SYSTEM_CONFIG_USE_DISPATCH
     dispatch_queue_t mDispatchQueue = nullptr;
 #elif CHIP_SYSTEM_CONFIG_USE_LIBEV
-    struct ev_loop * mLibEvLoopP;
+    struct PendingWork
+    {
+        TimerCompleteCallback mOnComplete;
+        void * mAppState;
+    };
+
+    struct ev_loop * mLibEvLoopP = nullptr;
+    struct ev_async mLibEvAsyncWatcher;
+    std::mutex mLibEvPendingWorkMutex;
+    std::deque<PendingWork> mLibEvPendingWork;
 #endif
 };
 

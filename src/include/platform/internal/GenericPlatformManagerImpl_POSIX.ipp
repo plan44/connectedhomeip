@@ -153,21 +153,17 @@ CHIP_ERROR GenericPlatformManagerImpl_POSIX<ImplClass>::_PostEvent(const ChipDev
 {
 #if CHIP_SYSTEM_CONFIG_USE_LIBEV
     // Note: PostEvent() is documented to allow being called "from any thread".
-    //   In the libev mainloop case however, calling from another thread is NOT supported.
-    //   Introducing this restriction is OK because the very goal of using libev is to avoid
-    //   multiple threads by running matter and all application code in the same thread on the
-    //   libev mainloop. So getting called from another thread here is very likely a
-    //   application design error.
-#if CHIP_STACK_LOCK_TRACKING_ENABLED
-    VerifyOrDieWithMsg(_IsChipStackLockedByCurrentThread(), DeviceLayer, "PostEvent() not allowed from outside chip stack lock");
-#endif
-
-    // Schedule dispatching this event via System Layer's ScheduleWork
+    // ScheduleWork() uses ev_async_send() to safely marshal event dispatch
+    // onto the libev thread, including when GLib or other foreign threads post.
     ChipDeviceEvent * eventCopyP = new ChipDeviceEvent;
     VerifyOrDie(eventCopyP != nullptr);
     *eventCopyP = *event;
-    SystemLayer().ScheduleWork(&_DispatchEventViaScheduleWork, eventCopyP);
-    return CHIP_NO_ERROR;
+    CHIP_ERROR err = SystemLayer().ScheduleWork(&_DispatchEventViaScheduleWork, eventCopyP);
+    if (err != CHIP_NO_ERROR)
+    {
+        delete eventCopyP;
+    }
+    return err;
 #else
     mChipEventQueue.Push(*event);
 

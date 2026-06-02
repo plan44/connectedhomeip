@@ -111,6 +111,16 @@ void LayerImplSelect::Shutdown()
     {
         w.DisableAndClear();
     }
+
+    if (mLibEvLoopP != nullptr)
+    {
+        ev_async_stop(mLibEvLoopP, &mLibEvAsyncWatcher);
+    }
+    {
+        std::lock_guard<std::mutex> lock(mLibEvPendingWorkMutex);
+        mLibEvPendingWork.clear();
+    }
+    mLibEvLoopP = nullptr;
 #else
     mTimerList.Clear();
     mTimerPool.ReleaseAll();
@@ -298,11 +308,11 @@ void LayerImplSelect::CancelTimer(TimerCompleteCallback onComplete, void * appSt
 
 CHIP_ERROR LayerImplSelect::ScheduleWork(TimerCompleteCallback onComplete, void * appState)
 {
-    assertChipStackLockedByCurrentThread();
-
     VerifyOrReturnError(mLayerState.IsInitialized(), CHIP_ERROR_INCORRECT_STATE);
 
 #if CHIP_SYSTEM_CONFIG_USE_DISPATCH
+    assertChipStackLockedByCurrentThread();
+
     dispatch_queue_t dispatchQueue = GetDispatchQueue();
     if (dispatchQueue)
     {
@@ -312,19 +322,21 @@ CHIP_ERROR LayerImplSelect::ScheduleWork(TimerCompleteCallback onComplete, void 
         return CHIP_NO_ERROR;
     }
 #elif CHIP_SYSTEM_CONFIG_USE_LIBEV
-    // schedule as timer with no delay, but do NOT cancel previous timers with same onComplete/appState!
-    TimerList::Node * timer = mTimerPool.Create(*this, SystemClock().GetMonotonicTimestamp(), onComplete, appState);
-    VerifyOrReturnError(timer != nullptr, CHIP_ERROR_NO_MEMORY);
     VerifyOrDie(mLibEvLoopP != nullptr);
-    ev_timer_init(&timer->mLibEvTimer, &LayerImplSelect::HandleLibEvTimer, 1, 0);
-    timer->mLibEvTimer.data = timer;
-    auto t                  = Clock::Milliseconds64(0).count();
-    ev_timer_set(&timer->mLibEvTimer, static_cast<double>(t) / 1E3, 0.);
-    (void) mTimerList.Add(timer);
-    ev_timer_start(mLibEvLoopP, &timer->mLibEvTimer);
+
+    // ev_async_send() is the only libev operation used here because it is
+    // explicitly safe from foreign threads. The watcher drains the protected
+    // queue on the libev thread.
+    {
+        std::lock_guard<std::mutex> lock(mLibEvPendingWorkMutex);
+        mLibEvPendingWork.push_back({ onComplete, appState });
+    }
+    ev_async_send(mLibEvLoopP, &mLibEvAsyncWatcher);
     return CHIP_NO_ERROR;
 #endif // CHIP_SYSTEM_CONFIG_USE_DISPATCH/LIBEV
 #if !CHIP_SYSTEM_CONFIG_USE_LIBEV
+    assertChipStackLockedByCurrentThread();
+
     // Note: dispatch based implementation needs this as fallback, but not LIBEV (and dead code is not allowed with -Werror)
     // Ideally we would not use a timer here at all, but if we try to just
     // ScheduleLambda the lambda needs to capture the following:
@@ -772,6 +784,34 @@ void LayerImplSelect::HandleTimerComplete(TimerList::Node * timer)
 }
 
 #elif CHIP_SYSTEM_CONFIG_USE_LIBEV
+
+void LayerImplSelect::SetLibEvLoop(struct ev_loop * aLibEvLoopP)
+{
+    VerifyOrDie(aLibEvLoopP != nullptr);
+    VerifyOrDie(mLibEvLoopP == nullptr);
+
+    mLibEvLoopP = aLibEvLoopP;
+    ev_async_init(&mLibEvAsyncWatcher, &LayerImplSelect::HandleLibEvAsync);
+    mLibEvAsyncWatcher.data = this;
+    ev_async_start(mLibEvLoopP, &mLibEvAsyncWatcher);
+}
+
+void LayerImplSelect::HandleLibEvAsync(EV_P_ struct ev_async * a, int revents)
+{
+    LayerImplSelect * layerP = static_cast<LayerImplSelect *>(a->data);
+    VerifyOrDie(layerP != nullptr);
+
+    std::deque<PendingWork> pendingWork;
+    {
+        std::lock_guard<std::mutex> lock(layerP->mLibEvPendingWorkMutex);
+        pendingWork.swap(layerP->mLibEvPendingWork);
+    }
+
+    for (const auto & work : pendingWork)
+    {
+        work.mOnComplete(layerP, work.mAppState);
+    }
+}
 
 void LayerImplSelect::HandleLibEvTimer(EV_P_ struct ev_timer * t, int revents)
 {
