@@ -322,7 +322,16 @@ void GenericPlatformManagerImpl<ImplClass>::_DispatchEvent(const ChipDeviceEvent
     uint32_t deltaMs = System::Clock::Milliseconds32(System::SystemClock().GetMonotonicTimestamp() - start).count();
     if (deltaMs > CHIP_DISPATCH_EVENT_LONG_DISPATCH_TIME_WARNING_THRESHOLD_MS)
     {
-        ChipLogError(DeviceLayer, "Long dispatch time: %" PRIu32 " ms, for event type %d", deltaMs, event->Type);
+        if (event->Type == DeviceEventType::kCallWorkFunct)
+        {
+            ChipLogError(DeviceLayer,
+                         "Long dispatch time: %" PRIu32 " ms, for event type %d, work function 0x%" PRIxPTR,
+                         deltaMs, event->Type, reinterpret_cast<uintptr_t>(event->CallWorkFunct.WorkFunct));
+        }
+        else
+        {
+            ChipLogError(DeviceLayer, "Long dispatch time: %" PRIu32 " ms, for event type %d", deltaMs, event->Type);
+        }
     }
 #endif // CHIP_DISPATCH_EVENT_LONG_DISPATCH_TIME_WARNING_THRESHOLD_MS != 0
 }
