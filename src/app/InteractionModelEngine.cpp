@@ -643,6 +643,10 @@ Protocols::InteractionModel::Status InteractionModelEngine::OnReadInitialRequest
 
         VerifyOrReturnError(subscribeRequestParser.GetKeepSubscriptions(&keepExistingSubscriptions) == CHIP_NO_ERROR,
                             Status::InvalidAction);
+        ChipLogProgress(InteractionModel,
+                        "Subscription requested from NodeId: " ChipLogFormatX64 ", FabricIndex: %u, KeepSubscriptions: %s",
+                        ChipLogValueX64(apExchangeContext->GetSessionHandle()->AsSecureSession()->GetPeerNodeId()),
+                        apExchangeContext->GetSessionHandle()->GetFabricIndex(), keepExistingSubscriptions ? "true" : "false");
         if (!keepExistingSubscriptions)
         {
             //
