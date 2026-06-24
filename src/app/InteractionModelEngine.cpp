@@ -2102,6 +2102,17 @@ void InteractionModelEngine::DecrementNumSubscriptionsToResume()
     }
 #endif // CHIP_CONFIG_ENABLE_ICD_CIP && !CHIP_CONFIG_SUBSCRIPTION_TIMEOUT_RESUMPTION
 }
+
+#if CHIP_CONFIG_SUBSCRIPTION_TIMEOUT_RESUMPTION
+void InteractionModelEngine::ResetNumSubscriptionsRetries()
+{
+    // Check if there are any subscriptions to resume; if not, the retry counter can be reset.
+    if (!HasSubscriptionsToResume())
+    {
+        mNumSubscriptionResumptionRetries = 0;
+    }
+}
+#endif // CHIP_CONFIG_SUBSCRIPTION_TIMEOUT_RESUMPTION
 #endif // CHIP_CONFIG_PERSIST_SUBSCRIPTIONS
 
 } // namespace app
