@@ -643,6 +643,10 @@ Protocols::InteractionModel::Status InteractionModelEngine::OnReadInitialRequest
 
         VerifyOrReturnError(subscribeRequestParser.GetKeepSubscriptions(&keepExistingSubscriptions) == CHIP_NO_ERROR,
                             Status::InvalidAction);
+        ChipLogProgress(InteractionModel,
+                        "Subscription requested from NodeId: " ChipLogFormatX64 ", FabricIndex: %u, KeepSubscriptions: %s",
+                        ChipLogValueX64(apExchangeContext->GetSessionHandle()->AsSecureSession()->GetPeerNodeId()),
+                        apExchangeContext->GetSessionHandle()->GetFabricIndex(), keepExistingSubscriptions ? "true" : "false");
         if (!keepExistingSubscriptions)
         {
             //
@@ -653,7 +657,7 @@ Protocols::InteractionModel::Status InteractionModelEngine::OnReadInitialRequest
                 if (handler->IsFromSubscriber(*apExchangeContext))
                 {
                     ChipLogProgress(InteractionModel,
-                                    "Deleting previous subscription from NodeId: " ChipLogFormatX64 ", FabricIndex: %u",
+                                    "Deleting previous active subscription from NodeId: " ChipLogFormatX64 ", FabricIndex: %u",
                                     ChipLogValueX64(apExchangeContext->GetSessionHandle()->AsSecureSession()->GetPeerNodeId()),
                                     apExchangeContext->GetSessionHandle()->GetFabricIndex());
                     handler->Close();
@@ -661,6 +665,40 @@ Protocols::InteractionModel::Status InteractionModelEngine::OnReadInitialRequest
 
                 return Loop::Continue;
             });
+
+#if CHIP_CONFIG_PERSIST_SUBSCRIPTIONS && CHIP_CONFIG_SUBSCRIPTION_TIMEOUT_RESUMPTION
+            if (mpSubscriptionResumptionStorage != nullptr)
+            {
+                SubscriptionResumptionStorage::SubscriptionInfo subscriptionInfo;
+                auto * iterator = mpSubscriptionResumptionStorage->IterateSubscriptions();
+                VerifyOrReturnError(iterator != nullptr, Status::ResourceExhausted);
+
+                while (iterator->Next(subscriptionInfo))
+                {
+                    if (subscriptionInfo.mNodeId == apExchangeContext->GetSessionHandle()->AsSecureSession()->GetPeerNodeId() &&
+                        subscriptionInfo.mFabricIndex == apExchangeContext->GetSessionHandle()->GetFabricIndex())
+                    {
+                        ChipLogProgress(InteractionModel,
+                                        "Deleting previous non-active subscription from NodeId: " ChipLogFormatX64
+                                        ", FabricIndex: %u, SubscriptionId: 0x%" PRIx32,
+                                        ChipLogValueX64(subscriptionInfo.mNodeId), subscriptionInfo.mFabricIndex,
+                                        subscriptionInfo.mSubscriptionId);
+                        mpSubscriptionResumptionStorage->Delete(subscriptionInfo.mNodeId, subscriptionInfo.mFabricIndex,
+                                                                subscriptionInfo.mSubscriptionId);
+                    }
+                }
+                iterator->Release();
+
+                // If we have no subscriptions to resume, we can cancel the timer, which might be armed
+                // if one of the subscriptions we deleted was about to be resumed.
+                if (!HasSubscriptionsToResume())
+                {
+                    mpExchangeMgr->GetSessionManager()->SystemLayer()->CancelTimer(ResumeSubscriptionsTimerCallback, this);
+                    mSubscriptionResumptionScheduled  = false;
+                    mNumSubscriptionResumptionRetries = 0;
+                }
+            }
+#endif // CHIP_CONFIG_PERSIST_SUBSCRIPTIONS && CHIP_CONFIG_SUBSCRIPTION_TIMEOUT_RESUMPTION
         }
 
         {
@@ -2064,6 +2102,17 @@ void InteractionModelEngine::DecrementNumSubscriptionsToResume()
     }
 #endif // CHIP_CONFIG_ENABLE_ICD_CIP && !CHIP_CONFIG_SUBSCRIPTION_TIMEOUT_RESUMPTION
 }
+
+#if CHIP_CONFIG_SUBSCRIPTION_TIMEOUT_RESUMPTION
+void InteractionModelEngine::ResetNumSubscriptionsRetries()
+{
+    // Check if there are any subscriptions to resume; if not, the retry counter can be reset.
+    if (!HasSubscriptionsToResume())
+    {
+        mNumSubscriptionResumptionRetries = 0;
+    }
+}
+#endif // CHIP_CONFIG_SUBSCRIPTION_TIMEOUT_RESUMPTION
 #endif // CHIP_CONFIG_PERSIST_SUBSCRIPTIONS
 
 } // namespace app
