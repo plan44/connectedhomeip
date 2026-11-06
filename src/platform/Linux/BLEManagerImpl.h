@@ -78,6 +78,8 @@ class BLEManagerImpl final : public BLEManager,
 
 public:
     CHIP_ERROR ConfigureBle(uint32_t aAdapterId, bool aIsCentral);
+    // Select before InitChipStack(). Default preserves existing Linux BLE behavior.
+    void SetBleEnabled(bool enabled) { mBleEnabled = enabled; }
     void OnScanError(CHIP_ERROR error) override;
 
     // Driven by BlueZ IO
@@ -196,6 +198,7 @@ private:
 
     char mDeviceName[kMaxDeviceNameLength + 1];
     bool mIsCentral = false;
+    bool mBleEnabled = true;
     BluezEndpoint mEndpoint{ mBluezObjectManager };
 
     BluezAdvertisement mBLEAdvertisement{ mEndpoint };

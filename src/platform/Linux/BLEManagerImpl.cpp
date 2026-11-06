@@ -83,13 +83,18 @@ CHIP_ERROR BLEManagerImpl::_Init()
     err = BleLayer::Init(this, this, this, &DeviceLayer::SystemLayer());
     SuccessOrExit(err);
 
-    mServiceMode = ConnectivityManager::kCHIPoBLEServiceMode_Enabled;
-    mFlags.ClearAll().Set(Flags::kAdvertisingEnabled, CHIP_DEVICE_CONFIG_CHIPOBLE_ENABLE_ADVERTISING_AUTOSTART && !mIsCentral);
+    mServiceMode = mBleEnabled ? ConnectivityManager::kCHIPoBLEServiceMode_Enabled
+                              : ConnectivityManager::kCHIPoBLEServiceMode_Disabled;
+    mFlags.ClearAll().Set(Flags::kAdvertisingEnabled,
+                         mBleEnabled && CHIP_DEVICE_CONFIG_CHIPOBLE_ENABLE_ADVERTISING_AUTOSTART && !mIsCentral);
     mFlags.Set(Flags::kFastAdvertisingEnabled, true);
 
     memset(mDeviceName, 0, sizeof(mDeviceName));
 
-    DeviceLayer::SystemLayer().ScheduleLambda([this] { DriveBLEState(); });
+    if (mBleEnabled)
+    {
+        DeviceLayer::SystemLayer().ScheduleLambda([this] { DriveBLEState(); });
+    }
 
 exit:
     return err;
@@ -97,6 +102,10 @@ exit:
 
 void BLEManagerImpl::_Shutdown()
 {
+    if (!mBleEnabled)
+    {
+        return;
+    }
     // Make sure that timers are stopped before shutting down the BLE layer.
     DeviceLayer::SystemLayer().CancelTimer(HandleScanTimer, this);
     DeviceLayer::SystemLayer().CancelTimer(HandleAdvertisingTimer, this);
@@ -112,6 +121,10 @@ void BLEManagerImpl::_Shutdown()
 
 CHIP_ERROR BLEManagerImpl::_SetAdvertisingEnabled(bool val)
 {
+    if (!mBleEnabled)
+    {
+        return val ? CHIP_ERROR_UNSUPPORTED_CHIP_FEATURE : CHIP_NO_ERROR;
+    }
     CHIP_ERROR err = CHIP_NO_ERROR;
 
     if (mFlags.Has(Flags::kAdvertisingEnabled) != val)
@@ -234,6 +247,10 @@ void BLEManagerImpl::_OnPlatformEvent(const ChipDeviceEvent * event)
 
 void BLEManagerImpl::HandlePlatformSpecificBLEEvent(const ChipDeviceEvent * apEvent)
 {
+    if (!mBleEnabled)
+    {
+        return;
+    }
     CHIP_ERROR err = CHIP_NO_ERROR;
     ChipLogDetail(DeviceLayer, "HandlePlatformSpecificBLEEvent %d", apEvent->Type);
     switch (apEvent->Type)
@@ -545,6 +562,10 @@ void BLEManagerImpl::HandleTXComplete(BLE_CONNECTION_OBJECT conId)
 
 void BLEManagerImpl::DriveBLEState()
 {
+    if (!mBleEnabled)
+    {
+        return;
+    }
     CHIP_ERROR err = CHIP_NO_ERROR;
 
     // Perform any initialization actions that must occur after the Chip task is running.
