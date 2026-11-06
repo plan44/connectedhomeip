@@ -9,3 +9,5 @@ src/controller/python/chip/clusters/Objects.py linguist-generated
 **/*.bat eol=crlf
 # Mark Matter operational certificate/key files as binary
 **/*.chip binary
+# Developer-only link to a local OpenWrt checkout; not a portable source input.
+third_party/openwrt/repo export-ignore

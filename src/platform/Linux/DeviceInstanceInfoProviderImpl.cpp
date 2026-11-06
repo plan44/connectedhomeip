@@ -24,6 +24,10 @@
   #include <platform/Linux/PosixConfig.h>
 #endif
 
+// Explicitly owned providers also need the generic method definitions when the
+// transitional provider is disabled in the platform configuration.
+#include <platform/internal/GenericDeviceInstanceInfoProvider.ipp>
+
 namespace chip {
 namespace DeviceLayer {
 
