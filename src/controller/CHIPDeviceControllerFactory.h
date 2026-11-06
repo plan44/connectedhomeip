@@ -160,6 +160,11 @@ struct FactoryInitParams
     /* The port used for operational communication to listen for and send messages over UDP/TCP.
      * The default value of `0` will pick any available port. */
     uint16_t listenPort = 0;
+
+    // Initialize the linked application data model. Pure client applications may
+    // disable this when sharing a binary with a server that owns the real model.
+    // Independent of enableServerInteractions, which controls CASE/DNS-SD roles.
+    bool initializeDataModel = true;
 };
 
 class DeviceControllerFactory
@@ -293,6 +298,7 @@ private:
     Credentials::CertificateValidityPolicy * mCertificateValidityPolicy = nullptr;
     SessionResumptionStorage * mSessionResumptionStorage                = nullptr;
     bool mEnableServerInteractions                                      = false;
+    bool mInitializeDataModel                                           = true;
 };
 
 } // namespace Controller

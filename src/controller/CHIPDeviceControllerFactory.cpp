@@ -67,6 +67,7 @@ CHIP_ERROR DeviceControllerFactory::Init(FactoryInitParams params)
     mCertificateValidityPolicy = params.certificateValidityPolicy;
     mSessionResumptionStorage  = params.sessionResumptionStorage;
     mEnableServerInteractions  = params.enableServerInteractions;
+    mInitializeDataModel       = params.initializeDataModel;
 
     // Initialize the system state. Note that it is left in a somewhat
     // special state where it is initialized, but has a ref count of 0.
@@ -92,6 +93,7 @@ CHIP_ERROR DeviceControllerFactory::ReinitSystemStateIfNecessary()
     params.listenPort                = mListenPort;
     params.fabricIndependentStorage  = mFabricIndependentStorage;
     params.enableServerInteractions  = mEnableServerInteractions;
+    params.initializeDataModel       = mInitializeDataModel;
     params.groupDataProvider         = mSystemState->GetGroupDataProvider();
     params.sessionKeystore           = mSystemState->GetSessionKeystore();
     params.fabricTable               = mSystemState->Fabrics();
@@ -238,7 +240,10 @@ CHIP_ERROR DeviceControllerFactory::InitSystemState(FactoryInitParams params)
     ReturnErrorOnFailure(stateParams.unsolicitedStatusHandler->Init(stateParams.exchangeMgr));
     ReturnErrorOnFailure(stateParams.bdxTransferServer->Init(stateParams.systemLayer, stateParams.exchangeMgr));
 
-    InitDataModelHandler();
+    if (params.initializeDataModel)
+    {
+        InitDataModelHandler();
+    }
 
     ReturnErrorOnFailure(Dnssd::Resolver::Instance().Init(stateParams.udpEndPointManager));
 
